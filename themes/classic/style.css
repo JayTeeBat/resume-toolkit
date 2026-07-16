@@ -237,6 +237,33 @@ a {
   color: var(--ink-soft);
 }
 
+/* --- Colophon ------------------------------------------------------------
+   Provenance, deliberately quiet: it identifies the file without competing
+   with the CV. It closes the document rather than repeating per page, because
+   a running footer would need Chromium's own header/footer templates, and
+   those require reserved page margins that would fight the @page rule above. */
+.colophon {
+  margin-top: var(--section-gap);
+  padding-top: 4pt;
+  border-top: 0.4pt solid var(--rule);
+  font-size: 7.2pt;
+  color: var(--ink-faint);
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+/* Separators in CSS, not markup: any piece can be absent without leaving a
+   dangling bullet behind it. */
+.colophon > * + *::before {
+  content: ' · ';
+  color: var(--rule);
+}
+
+.colophon a {
+  color: inherit;
+  border-bottom: none;
+}
+
 /* --- Screen-only affordances --------------------------------------------
    Give the browser preview a paper-on-desk look. Chromium applies @page in
    print mode, so none of this reaches the PDF. */

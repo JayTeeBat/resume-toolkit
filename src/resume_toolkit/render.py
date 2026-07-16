@@ -11,6 +11,7 @@ from jinja2 import Environment, FileSystemLoader
 from markupsafe import Markup
 
 from .paths import THEMES_DIR
+from .version import Stamp
 
 MONTHS = (
     "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -114,8 +115,20 @@ def _inline_stylesheet(theme_path: Path) -> Markup:
     return Markup(f"<style>\n{css}\n</style>")
 
 
-def render_html(resume: dict, theme: str = "classic") -> str:
-    """Render resume data to a single self-contained HTML document."""
+def render_html(
+    resume: dict,
+    theme: str = "classic",
+    *,
+    variant: str | None = None,
+    stamp: Stamp | None = None,
+) -> str:
+    """Render resume data to a single self-contained HTML document.
+
+    `variant` and `stamp` are passed in rather than looked up here: this module
+    stays a pure function of its arguments, and the git calls behind a stamp
+    belong with the rest of the orchestration in build.py. Both are optional, so
+    a theme still renders without provenance.
+    """
     path = theme_dir(theme)
     env = _environment(path)
     template = env.get_template("template.html.j2")
@@ -123,4 +136,6 @@ def render_html(resume: dict, theme: str = "classic") -> str:
         resume=resume,
         stylesheet=_inline_stylesheet(path),
         generated=date.today().isoformat(),
+        variant=variant,
+        stamp=stamp,
     )

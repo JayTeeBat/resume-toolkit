@@ -18,6 +18,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history: the colophon dates the CV from the last commit that
+          # touched resume.json. The default shallow clone fetches one commit,
+          # so that lookup would silently fall back to whatever HEAD is and
+          # stamp every build with today's date -- wrong, and wrong quietly.
+          fetch-depth: 0
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v5

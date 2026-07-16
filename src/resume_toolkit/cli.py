@@ -108,7 +108,9 @@ def site(
     theme: Annotated[str, typer.Option("--theme", "-t", help="Theme directory name.")] = "classic",
     out: Annotated[Path, typer.Option("--out", "-o", help="Output directory.")] = DIST_DIR,
 ) -> None:
-    """Build every variant plus an index.html — what CI publishes to Pages."""
+    # ASCII deliberately, as in _load_or_exit: a Windows cp1252 console mangles
+    # "-" typed as an em-dash into "?" when typer prints this help text.
+    """Build every variant plus an index.html - what CI publishes to Pages."""
     resume = _load_or_exit()
 
     try:
@@ -129,7 +131,7 @@ def serve(
     port: Annotated[int, typer.Option("--port", "-p")] = 8000,
 ) -> None:
     """Preview in a browser, live-reloading when resume.json or the theme changes."""
-    from .serve import serve_preview
+    from .serve import PortInUse, serve_preview
 
     try:
         target = get_variant(variant)
@@ -137,4 +139,8 @@ def serve(
         typer.echo(f"{err}: {exc}")
         raise typer.Exit(2)
 
-    serve_preview(target, theme=theme, port=port)
+    try:
+        serve_preview(target, theme=theme, port=port)
+    except PortInUse as exc:
+        typer.echo(f"{err}: {exc}")
+        raise typer.Exit(2)

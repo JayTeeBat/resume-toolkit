@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from resume_toolkit.render import UnknownTheme, daterange, location, pdate, render_html, urlhost
+from resume_toolkit.version import Stamp
 
 
 @pytest.mark.parametrize(
@@ -51,6 +52,38 @@ def test_render_omits_sections_absent_from_the_document() -> None:
     assert "Ada Lovelace" in html
     assert "Experience" not in html
     assert "Awards" not in html
+
+
+def test_colophon_identifies_the_cut_and_the_build() -> None:
+    """The whole point of the footer: a stray PDF must say what it is."""
+    html = render_html(
+        {"basics": {"name": "Ada"}, "meta": {"canonical": "https://example.com/cv/"}},
+        variant="acme",
+        stamp=Stamp(version="2026.07.16+g942700c", modified="2026-07-16", dirty=False),
+    )
+
+    assert "acme cut" in html
+    assert "2026.07.16+g942700c" in html
+    assert 'href="https://example.com/cv/"' in html
+
+
+def test_colophon_degrades_when_there_is_nothing_to_stamp() -> None:
+    """No git and no canonical must not leave an empty bordered strip.
+
+    Asserts on the markup, not the string "colophon": the class name also
+    appears in the inlined stylesheet, so it is present either way.
+    """
+    html = render_html({"basics": {"name": "Ada"}})
+
+    assert "<footer" not in html
+
+
+def test_colophon_survives_a_resume_with_no_meta_block() -> None:
+    """`meta` is optional in the schema; reaching through it must not raise."""
+    html = render_html({"basics": {"name": "Ada"}}, variant="full")
+
+    assert "full cut" in html
+    assert "latest at" not in html
 
 
 def test_render_inlines_fonts_and_styles() -> None:

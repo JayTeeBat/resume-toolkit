@@ -15,6 +15,12 @@ from .model import ValidationFailed, load_resume
 from .paths import RESUME_JSON
 from .render import UnknownTheme, render_html, theme_dir
 from .variants import Variant, apply_variant
+from .version import build_stamp
+
+
+class PortInUse(Exception):
+    pass
+
 
 # Polled by the injected script; a changed value triggers location.reload().
 _RELOAD_SCRIPT = """
@@ -65,7 +71,12 @@ def serve_preview(variant: Variant, *, theme: str = "classic", port: int = 8000)
         except (OSError, ValueError) as exc:
             return _error_page(f"could not read resume.json:\n\n{exc}")
         try:
-            html = render_html(apply_variant(resume, variant), theme=theme)
+            html = render_html(
+                apply_variant(resume, variant),
+                theme=theme,
+                variant=variant.name,
+                stamp=build_stamp(),
+            )
         except Exception as exc:  # noqa: BLE001 - show it in the page, don't kill the server
             return _error_page(f"{type(exc).__name__}: {exc}")
         return html.replace("</body>", _RELOAD_SCRIPT + "</body>")
@@ -88,8 +99,22 @@ def serve_preview(variant: Variant, *, theme: str = "classic", port: int = 8000)
         def log_message(self, *args) -> None:
             pass  # the poll would otherwise spam a line every 500ms
 
+    class Server(ThreadingHTTPServer):
+        # HTTPServer defaults this to 1. On Windows, SO_REUSEADDR lets a second
+        # socket bind a port that is already taken rather than refusing: both
+        # then listen, the incumbent keeps answering, and the preview silently
+        # serves whatever else is on the port. Refuse instead, so a busy port is
+        # a clear error rather than a confusing 404 from someone else's app.
+        allow_reuse_address = False
+
     url = f"http://127.0.0.1:{port}/"
-    server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    try:
+        server = Server(("127.0.0.1", port), Handler)
+    except OSError as exc:
+        raise PortInUse(
+            f"port {port} is already in use, so the preview cannot start.\n"
+            f"  Try a different one:  resume serve --port {port + 1}"
+        ) from exc
     print(f"preview: {url}  (variant: {variant.name}, theme: {theme})")
     print("watching resume.json and themes/ — edit and the page reloads. Ctrl+C to stop.")
     webbrowser.open(url)

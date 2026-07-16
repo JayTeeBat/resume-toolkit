@@ -9,6 +9,7 @@ from .paths import DIST_DIR
 from .pdf import html_to_pdf
 from .render import render_html
 from .variants import Variant, apply_variant
+from .version import build_stamp
 
 
 @dataclass(frozen=True)
@@ -28,7 +29,9 @@ def build_variant(
 ) -> list[Artifact]:
     """Render one variant to the requested formats. Returns what was written."""
     data = apply_variant(resume, variant)
-    html = render_html(data, theme=theme)
+    # Stamped once per variant, not per format, so the PDF and the HTML of the
+    # same cut can never disagree about what they are.
+    html = render_html(data, theme=theme, variant=variant.name, stamp=build_stamp())
     out_dir.mkdir(parents=True, exist_ok=True)
 
     written: list[Artifact] = []

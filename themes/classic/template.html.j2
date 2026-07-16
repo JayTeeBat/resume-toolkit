@@ -1,6 +1,14 @@
 {#
   Structure and semantics only — all styling lives in style.css, so restyling
   never means editing this file.
+
+  Section order is deliberate and is this theme's editorial opinion, not the
+  schema's: capabilities lead, because a reader scanning for a skills match
+  should not have to reconstruct it from twelve job entries first. Experience
+  then evidences them. Education, certificates and languages close as
+  credentials. Everything below Publications is dormant — the schema allows
+  those sections, this CV carries no data for them, and they render only if it
+  ever does.
 #}
 <!doctype html>
 <html lang="{{ resume.basics.get('x-lang', 'en') }}">
@@ -34,9 +42,23 @@
   </section>
   {% endif %}
 
+  {% if resume.skills %}
+  <section class="section">
+    <h2>Core Engineering Capabilities</h2>
+    <dl class="skills">
+      {% for s in resume.skills %}
+      <div class="skill">
+        <dt>{{ s.name }}{% if s.level %} <span class="level">({{ s.level }})</span>{% endif %}</dt>
+        <dd>{{ (s.keywords or []) | join(' · ') }}</dd>
+      </div>
+      {% endfor %}
+    </dl>
+  </section>
+  {% endif %}
+
   {% if resume.work %}
   <section class="section">
-    <h2>Experience</h2>
+    <h2>Professional Experience</h2>
     {% for job in resume.work %}
     <div class="entry">
       <div class="entry-head">
@@ -101,17 +123,20 @@
   </section>
   {% endif %}
 
-  {% if resume.skills %}
+  {% if resume.certificates %}
   <section class="section">
-    <h2>Skills</h2>
-    <dl class="skills">
-      {% for s in resume.skills %}
-      <div class="skill">
-        <dt>{{ s.name }}{% if s.level %} <span class="level">({{ s.level }})</span>{% endif %}</dt>
-        <dd>{{ (s.keywords or []) | join(' · ') }}</dd>
+    <h2>Certifications</h2>
+    {% for c in resume.certificates %}
+    <div class="entry">
+      <div class="entry-head">
+        <h3 class="entry-title">
+          {% if c.url %}<a href="{{ c.url }}">{{ c.name }}</a>{% else %}{{ c.name }}{% endif %}
+        </h3>
+        <span class="dates">{{ c.date | pdate }}</span>
       </div>
-      {% endfor %}
-    </dl>
+      {% if c.issuer %}<p class="entry-meta">{{ c.issuer }}</p>{% endif %}
+    </div>
+    {% endfor %}
   </section>
   {% endif %}
 
@@ -129,39 +154,6 @@
   </section>
   {% endif %}
 
-  {% if resume.awards %}
-  <section class="section">
-    <h2>Awards</h2>
-    {% for a in resume.awards %}
-    <div class="entry">
-      <div class="entry-head">
-        <h3 class="entry-title">{{ a.title }}</h3>
-        <span class="dates">{{ a.date | pdate }}</span>
-      </div>
-      {% if a.awarder %}<p class="entry-meta">{{ a.awarder }}</p>{% endif %}
-      {% if a.summary %}<p class="entry-summary">{{ a.summary }}</p>{% endif %}
-    </div>
-    {% endfor %}
-  </section>
-  {% endif %}
-
-  {% if resume.certificates %}
-  <section class="section">
-    <h2>Certificates</h2>
-    {% for c in resume.certificates %}
-    <div class="entry">
-      <div class="entry-head">
-        <h3 class="entry-title">
-          {% if c.url %}<a href="{{ c.url }}">{{ c.name }}</a>{% else %}{{ c.name }}{% endif %}
-        </h3>
-        <span class="dates">{{ c.date | pdate }}</span>
-      </div>
-      {% if c.issuer %}<p class="entry-meta">{{ c.issuer }}</p>{% endif %}
-    </div>
-    {% endfor %}
-  </section>
-  {% endif %}
-
   {% if resume.publications %}
   <section class="section">
     <h2>Publications</h2>
@@ -175,6 +167,22 @@
       </div>
       {% if p.publisher %}<p class="entry-meta">{{ p.publisher }}</p>{% endif %}
       {% if p.summary %}<p class="entry-summary">{{ p.summary }}</p>{% endif %}
+    </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  {% if resume.awards %}
+  <section class="section">
+    <h2>Awards</h2>
+    {% for a in resume.awards %}
+    <div class="entry">
+      <div class="entry-head">
+        <h3 class="entry-title">{{ a.title }}</h3>
+        <span class="dates">{{ a.date | pdate }}</span>
+      </div>
+      {% if a.awarder %}<p class="entry-meta">{{ a.awarder }}</p>{% endif %}
+      {% if a.summary %}<p class="entry-summary">{{ a.summary }}</p>{% endif %}
     </div>
     {% endfor %}
   </section>
@@ -226,6 +234,21 @@
     </div>
     {% endfor %}
   </section>
+  {% endif %}
+
+  {#
+    Once a PDF leaves this machine it is an anonymous file: a reader holding one
+    months later cannot tell which cut it is, how old it is, or whether a newer
+    one exists. The colophon answers all three. Separators are drawn in CSS, so
+    a missing piece cannot strand a dangling bullet.
+  #}
+  {% set canonical = (resume.get('meta') or {}).get('canonical') %}
+  {% if variant or stamp or canonical %}
+  <footer class="colophon">
+    {% if variant %}<span>{{ variant }} cut</span>{% endif %}
+    {% if stamp %}<span>{{ stamp.version }}</span>{% endif %}
+    {% if canonical %}<span>latest at <a href="{{ canonical }}">{{ canonical | urlhost }}</a></span>{% endif %}
+  </footer>
   {% endif %}
 
 </article>

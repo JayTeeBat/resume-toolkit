@@ -1,0 +1,58 @@
+name: build
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      # Chromium is ~150MB; without this every run re-downloads it.
+      - name: Resolve Playwright version
+        id: pw
+        run: echo "version=$(uv run python -c 'from importlib.metadata import version; print(version(\"playwright\"))')" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
+      - name: Install Chromium
+        # --with-deps installs the system libraries Chromium needs, which the
+        # cache does not cover, so it must run on a cache hit too.
+        run: uv run playwright install --with-deps chromium
+
+      - name: Validate resume.json
+        run: uv run resume validate
+
+      - name: Test
+        run: uv run pytest -q
+
+      - name: Build all variants
+        run: uv run resume build --format all
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: resume
+          path: dist/
+          if-no-files-found: error

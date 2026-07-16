@@ -1,0 +1,261 @@
+/* ============================================================================
+   Classic theme.
+   This is the styling definition — edit here, never the template.
+   Design tokens live in :root; everything below is expressed in terms of them.
+   ========================================================================= */
+
+@font-face {
+  font-family: 'Source Sans 3';
+  font-style: normal;
+  font-weight: 400 700;          /* variable font: one file covers the range */
+  font-display: block;
+  src: url('fonts/source-sans-3-latin.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Source Sans 3';
+  font-style: italic;
+  font-weight: 400 700;
+  font-display: block;
+  src: url('fonts/source-sans-3-latin-italic.woff2') format('woff2');
+}
+
+:root {
+  --ink:        #1a1a1a;
+  --ink-soft:   #4a4a4a;
+  --ink-faint:  #767676;
+  --accent:     #1f4e79;
+  --rule:       #d8d8d8;
+
+  --font: 'Source Sans 3', system-ui, sans-serif;
+
+  /* Tuning these three is the fastest way to fit content onto one page. */
+  --size-base:    9.6pt;
+  --leading:      1.42;
+  --section-gap:  9pt;
+
+  --entry-gap:    6.5pt;
+}
+
+/* --- Page geometry -------------------------------------------------------
+   The @page rule owns the paper size and margins. pdf.py passes
+   prefer_css_page_size=True and zeroed margins so that these values win
+   instead of Chromium's own ~1cm defaults. */
+@page {
+  size: A4;
+  margin: 15mm 14mm;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  font-size: var(--size-base);
+  line-height: var(--leading);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 0.4pt solid var(--rule);
+}
+
+/* --- Masthead ----------------------------------------------------------- */
+
+.masthead {
+  border-bottom: 1.2pt solid var(--accent);
+  padding-bottom: 6pt;
+  margin-bottom: var(--section-gap);
+}
+
+.name {
+  margin: 0;
+  font-size: 21pt;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.1;
+  color: var(--accent);
+}
+
+.label {
+  margin: 1.5pt 0 0;
+  font-size: 11pt;
+  font-weight: 400;
+  color: var(--ink-soft);
+}
+
+.contact {
+  list-style: none;
+  margin: 5pt 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2pt 10pt;
+  font-size: 8.6pt;
+  color: var(--ink-soft);
+}
+
+/* Bullet separators between contact items, but not before the first. */
+.contact li + li::before {
+  content: '·';
+  margin-right: 10pt;
+  color: var(--ink-faint);
+}
+
+.contact a { border-bottom: none; }
+
+/* --- Sections ----------------------------------------------------------- */
+
+.section { margin-bottom: var(--section-gap); }
+
+.section h2 {
+  margin: 0 0 5pt;
+  font-size: 9.4pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  color: var(--accent);
+  border-bottom: 0.5pt solid var(--rule);
+  padding-bottom: 2.5pt;
+  /* Never leave a heading stranded at the foot of a page. */
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+.summary p {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+/* --- Entries ------------------------------------------------------------ */
+
+.entry {
+  margin-bottom: var(--entry-gap);
+  /* Keep a job and its bullets together rather than split across pages. */
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.entry:last-child { margin-bottom: 0; }
+
+.entry-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10pt;
+}
+
+.entry-title {
+  margin: 0;
+  font-size: 10.2pt;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.entry-title .at {
+  font-weight: 400;
+  color: var(--ink-faint);
+}
+
+.dates {
+  flex-shrink: 0;
+  font-size: 8.4pt;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+
+.entry-meta {
+  margin: 0.5pt 0 0;
+  font-size: 8.8pt;
+  font-style: italic;
+  color: var(--ink-faint);
+}
+
+.entry-summary {
+  margin: 2pt 0 0;
+  color: var(--ink-soft);
+}
+
+.highlights {
+  margin: 2.5pt 0 0;
+  padding-left: 11pt;
+}
+
+.highlights li {
+  margin-bottom: 1.2pt;
+  padding-left: 1pt;
+}
+
+.highlights li::marker {
+  color: var(--accent);
+}
+
+.keywords {
+  margin: 2.5pt 0 0;
+  font-size: 8.6pt;
+  color: var(--ink-faint);
+}
+
+/* --- Definition-list sections (skills, languages, interests) ------------ */
+
+.skills {
+  margin: 0;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2.5pt 10pt;
+}
+
+/* Each .skill is a display:contents wrapper so its dt/dd participate directly
+   in the parent grid — keeps the template's grouping without a layout box. */
+.skill { display: contents; }
+
+.skills dt {
+  font-weight: 600;
+  break-inside: avoid;
+}
+
+.skills dd {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+.skills .level {
+  font-weight: 400;
+  color: var(--ink-faint);
+}
+
+.reference {
+  margin: 0;
+  padding-left: 8pt;
+  border-left: 1.5pt solid var(--rule);
+  font-style: italic;
+  color: var(--ink-soft);
+}
+
+/* --- Screen-only affordances --------------------------------------------
+   Give the browser preview a paper-on-desk look. Chromium applies @page in
+   print mode, so none of this reaches the PDF. */
+@media screen {
+  body {
+    background: #eceff1;
+    padding: 24px 12px;
+  }
+  .resume {
+    display: block;
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 auto;
+    padding: 15mm 14mm;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .12), 0 8px 28px rgba(0, 0, 0, .10);
+  }
+}
+
+@media print {
+  a { border-bottom: none; }
+}

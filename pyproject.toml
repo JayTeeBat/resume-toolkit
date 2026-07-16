@@ -1,0 +1,37 @@
+[project]
+name = "resume-toolkit"
+version = "0.1.0"
+description = "Toolchain to validate a JSON Resume and render it to styled PDF/HTML"
+readme = "README.md"
+authors = [
+    { name = "Jacques Thomazo", email = "37212783+JayTeeBat@users.noreply.github.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "jinja2>=3.1.4",
+    # [format] pulls the validators that make `format: uri` / `format: email`
+    # actually enforceable rather than decorative.
+    "jsonschema[format]>=4.23.0",
+    "playwright>=1.49.0",
+    "typer>=0.15.1",
+]
+
+[project.scripts]
+resume = "resume_toolkit.cli:app"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.4",
+    # Test-only: used to assert the built PDF's page geometry and text layer.
+    "pypdf>=5.1.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.10.9,<0.11.0"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "slow: drives a real Chromium; deselect with -m 'not slow'",
+]

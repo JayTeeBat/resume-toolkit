@@ -1,0 +1,233 @@
+{#
+  Structure and semantics only — all styling lives in style.css, so restyling
+  never means editing this file.
+#}
+<!doctype html>
+<html lang="{{ resume.basics.get('x-lang', 'en') }}">
+<head>
+<meta charset="utf-8">
+<title>{{ resume.basics.name }} — CV</title>
+{{ stylesheet }}
+</head>
+<body>
+<article class="resume">
+
+  {% set b = resume.basics %}
+  <header class="masthead">
+    <h1 class="name">{{ b.name }}</h1>
+    {% if b.label %}<p class="label">{{ b.label }}</p>{% endif %}
+
+    <ul class="contact">
+      {% if b.email %}<li><a href="mailto:{{ b.email }}">{{ b.email }}</a></li>{% endif %}
+      {% if b.phone %}<li><a href="tel:{{ b.phone | replace(' ', '') }}">{{ b.phone }}</a></li>{% endif %}
+      {% if b.url %}<li><a href="{{ b.url }}">{{ b.url | urlhost }}</a></li>{% endif %}
+      {% if b.location and b.location | location %}<li>{{ b.location | location }}</li>{% endif %}
+      {% for p in b.profiles or [] %}
+        <li><a href="{{ p.url }}">{{ p.network }}{% if p.username %} / {{ p.username }}{% endif %}</a></li>
+      {% endfor %}
+    </ul>
+  </header>
+
+  {% if b.summary %}
+  <section class="section summary">
+    <p>{{ b.summary }}</p>
+  </section>
+  {% endif %}
+
+  {% if resume.work %}
+  <section class="section">
+    <h2>Experience</h2>
+    {% for job in resume.work %}
+    <div class="entry">
+      <div class="entry-head">
+        <h3 class="entry-title">
+          {{ job.position }}{% if job.name %} <span class="at">at</span>
+          {% if job.url %}<a href="{{ job.url }}">{{ job.name }}</a>{% else %}{{ job.name }}{% endif %}{% endif %}
+        </h3>
+        <span class="dates">{{ job | daterange }}</span>
+      </div>
+      {% if job.location %}<p class="entry-meta">{{ job.location }}</p>{% endif %}
+      {% if job.summary %}<p class="entry-summary">{{ job.summary }}</p>{% endif %}
+      {% if job.highlights %}
+      <ul class="highlights">
+        {% for h in job.highlights %}<li>{{ h }}</li>{% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  {% if resume.projects %}
+  <section class="section">
+    <h2>Projects</h2>
+    {% for p in resume.projects %}
+    <div class="entry">
+      <div class="entry-head">
+        <h3 class="entry-title">
+          {% if p.url %}<a href="{{ p.url }}">{{ p.name }}</a>{% else %}{{ p.name }}{% endif %}
+        </h3>
+        <span class="dates">{{ p | daterange }}</span>
+      </div>
+      {% if p.description %}<p class="entry-summary">{{ p.description }}</p>{% endif %}
+      {% if p.highlights %}
+      <ul class="highlights">
+        {% for h in p.highlights %}<li>{{ h }}</li>{% endfor %}
+      </ul>
+      {% endif %}
+      {% if p.keywords %}<p class="keywords">{{ p.keywords | join(' · ') }}</p>{% endif %}
+    </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  {% if resume.education %}
+  <section class="section">
+    <h2>Education</h2>
+    {% for e in resume.education %}
+    <div class="entry">
+      <div class="entry-head">
+        <h3 class="entry-title">
+          {% if e.url %}<a href="{{ e.url }}">{{ e.institution }}</a>{% else %}{{ e.institution }}{% endif %}
+        </h3>
+        <span class="dates">{{ e | daterange }}</span>
+      </div>
+      {% if e.studyType or e.area %}
+      <p class="entry-meta">{{ [e.studyType, e.area] | select | join(', ') }}{% if e.score %} — {{ e.score }}{% endif %}</p>
+      {% endif %}
+      {% if e.courses %}<p class="keywords">{{ e.courses | join(' · ') }}</p>{% endif %}
+    </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  {% if resume.skills %}
+  <section class="section">
+    <h2>Skills</h2>
+    <dl class="skills">
+      {% for s in resume.skills %}
+      <div class="skill">
+        <dt>{{ s.name }}{% if s.level %} <span class="level">({{ s.level }})</span>{% endif %}</dt>
+        <dd>{{ (s.keywords or []) | join(' · ') }}</dd>
+      </div>
+      {% endfor %}
+    </dl>
+  </section>
+  {% endif %}
+
+  {% if resume.languages %}
+  <section class="section">
+    <h2>Languages</h2>
+    <dl class="skills">
+      {% for l in resume.languages %}
+      <div class="skill">
+        <dt>{{ l.language }}</dt>
+        <dd>{{ l.fluency }}</dd>
+      </div>
+      {% endfor %}
+    </dl>
+  </section>
+  {% endif %}
+
+  {% if resume.awards %}
+  <section class="section">
+    <h2>Awards</h2>
+    {% for a in resume.awards %}
+    <div class="entry">
+      <div class="entry-head">
+        <h3 class="entry-title">{{ a.title }}</h3>
+        <span class="dates">{{ a.date | pdate }}</span>
+      </div>
+      {% if a.awarder %}<p class="entry-meta">{{ a.awarder }}</p>{% endif %}
+      {% if a.summary %}<p class="entry-summary">{{ a.summary }}</p>{% endif %}
+    </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  {% if resume.certificates %}
+  <section class="section">
+    <h2>Certificates</h2>
+    {% for c in resume.certificates %}
+    <div class="entry">
+      <div class="entry-head">
+        <h3 class="entry-title">
+          {% if c.url %}<a href="{{ c.url }}">{{ c.name }}</a>{% else %}{{ c.name }}{% endif %}
+        </h3>
+        <span class="dates">{{ c.date | pdate }}</span>
+      </div>
+      {% if c.issuer %}<p class="entry-meta">{{ c.issuer }}</p>{% endif %}
+    </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  {% if resume.publications %}
+  <section class="section">
+    <h2>Publications</h2>
+    {% for p in resume.publications %}
+    <div class="entry">
+      <div class="entry-head">
+        <h3 class="entry-title">
+          {% if p.url %}<a href="{{ p.url }}">{{ p.name }}</a>{% else %}{{ p.name }}{% endif %}
+        </h3>
+        <span class="dates">{{ p.releaseDate | pdate }}</span>
+      </div>
+      {% if p.publisher %}<p class="entry-meta">{{ p.publisher }}</p>{% endif %}
+      {% if p.summary %}<p class="entry-summary">{{ p.summary }}</p>{% endif %}
+    </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  {% if resume.volunteer %}
+  <section class="section">
+    <h2>Volunteering</h2>
+    {% for v in resume.volunteer %}
+    <div class="entry">
+      <div class="entry-head">
+        <h3 class="entry-title">
+          {{ v.position }}{% if v.organization %} <span class="at">at</span> {{ v.organization }}{% endif %}
+        </h3>
+        <span class="dates">{{ v | daterange }}</span>
+      </div>
+      {% if v.summary %}<p class="entry-summary">{{ v.summary }}</p>{% endif %}
+      {% if v.highlights %}
+      <ul class="highlights">
+        {% for h in v.highlights %}<li>{{ h }}</li>{% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  {% if resume.interests %}
+  <section class="section">
+    <h2>Interests</h2>
+    <dl class="skills">
+      {% for i in resume.interests %}
+      <div class="skill">
+        <dt>{{ i.name }}</dt>
+        <dd>{{ (i.keywords or []) | join(' · ') }}</dd>
+      </div>
+      {% endfor %}
+    </dl>
+  </section>
+  {% endif %}
+
+  {% if resume.references %}
+  <section class="section">
+    <h2>References</h2>
+    {% for r in resume.references %}
+    <div class="entry">
+      <blockquote class="reference">{{ r.reference }}</blockquote>
+      <p class="entry-meta">— {{ r.name }}</p>
+    </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+</article>
+</body>
+</html>

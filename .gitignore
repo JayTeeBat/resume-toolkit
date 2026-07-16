@@ -1,6 +1,12 @@
 # Build output
 /dist/
 
+# LinkedIn data exports. These carry far more personal data than a CV needs
+# (birth date, contacts, messages, ad targeting) and must never be committed.
+# Extract what belongs in resume.json, then delete the archive.
+*LinkedInDataExport*
+*.zip
+
 # Python
 __pycache__/
 *.py[cod]

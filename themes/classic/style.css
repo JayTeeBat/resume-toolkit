@@ -31,10 +31,10 @@
 
   /* Tuning these three is the fastest way to fit content onto one page. */
   --size-base:    9.6pt;
-  --leading:      1.42;
-  --section-gap:  9pt;
+  --leading:      1.35;
+  --section-gap:  7pt;
 
-  --entry-gap:    6.5pt;
+  --entry-gap:    5.5pt;
 }
 
 /* --- Page geometry -------------------------------------------------------

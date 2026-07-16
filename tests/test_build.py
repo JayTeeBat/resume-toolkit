@@ -34,14 +34,33 @@ def test_html_build_is_self_contained(resume, tmp_path) -> None:
 
 
 def test_short_variant_drops_tagged_entries(resume, tmp_path) -> None:
-    full = build_variant(resume, get_variant("full"), formats=("html",), out_dir=tmp_path)
-    short = build_variant(resume, get_variant("short"), formats=("html",), out_dir=tmp_path)
+    """Derives its expectation from resume.json rather than hardcoding content.
 
-    full_html = full[0].path.read_text(encoding="utf-8")
-    short_html = short[0].path.read_text(encoding="utf-8")
+    An earlier version asserted on a literal company name and broke the moment
+    the real CV replaced the placeholder. The behaviour under test is the
+    filtering, not any particular employer.
+    """
+    short = get_variant("short")
+    dropped = [
+        w for w in resume["work"]
+        if w.get("x-tags") and not (set(w["x-tags"]) & short.include)
+    ]
+    kept = [w for w in resume["work"] if not w.get("x-tags")]
+    assert dropped and kept, "resume.json must have both tagged and untagged work to test this"
 
-    assert "Earlier Example Company" in full_html
-    assert "Earlier Example Company" not in short_html
+    full_html = build_variant(
+        resume, get_variant("full"), formats=("html",), out_dir=tmp_path
+    )[0].path.read_text(encoding="utf-8")
+    short_html = build_variant(
+        resume, short, formats=("html",), out_dir=tmp_path
+    )[0].path.read_text(encoding="utf-8")
+
+    for entry in dropped:
+        assert entry["position"] in full_html
+        assert entry["position"] not in short_html, f"{entry['position']} leaked into short"
+
+    for entry in kept:
+        assert entry["position"] in short_html, f"untagged {entry['position']} missing from short"
 
 
 @pytest.mark.slow

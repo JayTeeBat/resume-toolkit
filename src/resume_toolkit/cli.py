@@ -12,6 +12,7 @@ from .model import ValidationFailed, load_resume
 from .paths import DIST_DIR, RESUME_JSON
 from .pdf import BrowserMissing
 from .render import UnknownTheme
+from .site import build_site
 from .variants import UnknownVariant, get_variant, load_variants
 
 app = typer.Typer(
@@ -100,6 +101,25 @@ def build(
     except (UnknownTheme, BrowserMissing) as exc:
         typer.echo(f"{err}: {exc}")
         raise typer.Exit(2)
+
+
+@app.command()
+def site(
+    theme: Annotated[str, typer.Option("--theme", "-t", help="Theme directory name.")] = "classic",
+    out: Annotated[Path, typer.Option("--out", "-o", help="Output directory.")] = DIST_DIR,
+) -> None:
+    """Build every variant plus an index.html — what CI publishes to Pages."""
+    resume = _load_or_exit()
+
+    try:
+        written = build_site(resume, theme=theme, out_dir=out)
+    except (UnknownTheme, BrowserMissing) as exc:
+        typer.echo(f"{err}: {exc}")
+        raise typer.Exit(2)
+
+    for artifact in written:
+        size = artifact.path.stat().st_size
+        typer.echo(f"{ok}: {artifact.path} ({size / 1024:.0f} KB)")
 
 
 @app.command()

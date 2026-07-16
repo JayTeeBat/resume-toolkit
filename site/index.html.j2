@@ -1,0 +1,145 @@
+{#
+  The published landing page — what GitHub Pages serves at the site root.
+  Self-contained by design: this is one small page, so its CSS lives inline
+  rather than earning a second stylesheet to keep in sync with the theme's.
+#}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ resume.basics.name }} — CV</title>
+<meta name="description" content="{{ resume.basics.label }}">
+<style>
+  :root {
+    --bg:      #f4f6f8;
+    --card:    #ffffff;
+    --ink:     #1a1a1a;
+    --soft:    #4a4a4a;
+    --faint:   #767676;
+    --accent:  #1f4e79;
+    --rule:    #e2e5e9;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:     #14171a;
+      --card:   #1d2125;
+      --ink:    #e8eaed;
+      --soft:   #b4b8bd;
+      --faint:  #868b91;
+      --accent: #7db3e0;
+      --rule:   #2c3237;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 3rem 1.25rem 4rem;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 34rem; margin: 0 auto; }
+
+  h1 {
+    margin: 0;
+    font-size: 1.9rem;
+    letter-spacing: -0.02em;
+    color: var(--accent);
+  }
+  .label { margin: .35rem 0 0; color: var(--soft); }
+  .contact {
+    margin: .6rem 0 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .2rem .9rem;
+    font-size: .85rem;
+    color: var(--faint);
+  }
+  .contact a { color: var(--faint); }
+
+  .cards {
+    margin: 2.25rem 0 0;
+    display: grid;
+    gap: 1rem;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    padding: 1.15rem 1.25rem;
+  }
+  .card h2 {
+    margin: 0;
+    font-size: 1.05rem;
+    text-transform: capitalize;
+  }
+  .card p { margin: .3rem 0 0; color: var(--soft); font-size: .9rem; }
+
+  .actions { margin-top: .95rem; display: flex; flex-wrap: wrap; gap: .5rem; }
+  .btn {
+    display: inline-block;
+    padding: .4rem .85rem;
+    border-radius: 6px;
+    border: 1px solid var(--accent);
+    font-size: .85rem;
+    font-weight: 600;
+    text-decoration: none;
+    color: var(--accent);
+  }
+  .btn.primary { background: var(--accent); color: var(--card); }
+  .size { align-self: center; font-size: .78rem; color: var(--faint); }
+
+  footer {
+    margin-top: 2.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--rule);
+    font-size: .8rem;
+    color: var(--faint);
+  }
+  footer a { color: var(--faint); }
+</style>
+</head>
+<body>
+<main>
+
+  {% set b = resume.basics %}
+  <header>
+    <h1>{{ b.name }}</h1>
+    {% if b.label %}<p class="label">{{ b.label }}</p>{% endif %}
+    <ul class="contact">
+      {% if b.email %}<li><a href="mailto:{{ b.email }}">{{ b.email }}</a></li>{% endif %}
+      {% if b.location and b.location | location %}<li>{{ b.location | location }}</li>{% endif %}
+      {% for p in b.profiles or [] %}
+        <li><a href="{{ p.url }}">{{ p.network }}</a></li>
+      {% endfor %}
+    </ul>
+  </header>
+
+  <div class="cards">
+    {% for c in cards %}
+    <section class="card">
+      <h2>{{ c.name }}</h2>
+      {% if c.description %}<p>{{ c.description }}</p>{% endif %}
+      <div class="actions">
+        <a class="btn primary" href="{{ c.pdf }}">Download PDF</a>
+        <a class="btn" href="{{ c.html }}">View in browser</a>
+        <span class="size">{{ c.size }}</span>
+      </div>
+    </section>
+    {% endfor %}
+  </div>
+
+  <footer>
+    Built from
+    {% if source_url %}<a href="{{ source_url }}">resume.json</a>{% else %}resume.json{% endif %}
+    · updated {{ generated }}
+  </footer>
+
+</main>
+</body>
+</html>

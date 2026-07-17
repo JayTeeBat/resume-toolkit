@@ -87,13 +87,17 @@ def build_site(
     theme: str = "classic",
     out_dir: Path = DIST_DIR,
 ) -> list[Artifact]:
-    """Build every variant as PDF + HTML, then an index.html linking them.
+    """Build every publishable variant as PDF + HTML, then an index linking them.
 
-    Card order follows variants.toml, so reordering the file reorders the page.
+    Only variants marked `publish = true` in variants.toml reach the page, so a
+    CV tailored to one employer never leaks onto a public URL. Card order follows
+    variants.toml, so reordering the file reorders the page.
     """
-    variants = list(load_variants().values())
+    variants = [v for v in load_variants().values() if v.publish]
     if not variants:
-        raise ValueError("variants.toml defines no variants")
+        raise ValueError(
+            "no publishable variants: mark at least one with `publish = true` in variants.toml"
+        )
 
     written: list[Artifact] = []
     for variant in variants:

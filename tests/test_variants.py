@@ -88,6 +88,29 @@ def test_repo_variants_toml_loads() -> None:
     assert variants["full"].includes_everything
 
 
+def test_publish_defaults_to_false(tmp_path) -> None:
+    """Publishing is opt-in: an unmarked variant must stay off the public page."""
+    toml = tmp_path / "variants.toml"
+    toml.write_text('[draft]\ninclude = ["*"]\n', encoding="utf-8")
+
+    assert load_variants(toml)["draft"].publish is False
+
+
+def test_publish_is_read_from_the_toml(tmp_path) -> None:
+    toml = tmp_path / "variants.toml"
+    toml.write_text('[public]\ninclude = []\npublish = true\n', encoding="utf-8")
+
+    assert load_variants(toml)["public"].publish is True
+
+
+def test_repo_publishes_only_the_short_cut() -> None:
+    """The public page must carry the short CV and never the full one."""
+    variants = load_variants()
+
+    assert variants["short"].publish is True
+    assert variants["full"].publish is False
+
+
 def test_unknown_variant_names_the_known_ones() -> None:
     with pytest.raises(UnknownVariant, match="full"):
         get_variant("does-not-exist")

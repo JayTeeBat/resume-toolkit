@@ -38,6 +38,10 @@ class Variant:
     name: str
     description: str
     include: frozenset[str]
+    #: Whether `resume site` puts this cut on the public GitHub Pages page.
+    #: Defaults to False so a new variant — typically a CV tailored to one
+    #: employer — is never published by accident. Publishing is opt-in.
+    publish: bool = False
 
     @property
     def includes_everything(self) -> bool:
@@ -55,6 +59,7 @@ def load_variants(path: Path = VARIANTS_TOML) -> dict[str, Variant]:
             name=name,
             description=body.get("description", ""),
             include=frozenset(body.get("include", [])),
+            publish=bool(body.get("publish", False)),
         )
         for name, body in raw.items()
     }

@@ -81,6 +81,8 @@
   .card p { margin: .3rem 0 0; color: var(--soft); font-size: .9rem; }
 
   .actions { margin-top: .95rem; display: flex; flex-wrap: wrap; gap: .5rem; }
+  /* Standalone (single CV): no card around it, so it needs the cards' top gap. */
+  .actions.solo { margin-top: 2.25rem; }
   .btn {
     display: inline-block;
     padding: .4rem .85rem;
@@ -120,19 +122,31 @@
     </ul>
   </header>
 
-  <div class="cards">
-    {% for c in cards %}
-    <section class="card">
-      <h2>{{ c.name }}</h2>
-      {% if c.description %}<p>{{ c.description }}</p>{% endif %}
-      <div class="actions">
-        <a class="btn primary" href="{{ c.pdf }}">Download PDF</a>
-        <a class="btn" href="{{ c.html }}">View in browser</a>
-        <span class="size">{{ c.size }}</span>
-      </div>
-    </section>
-    {% endfor %}
-  </div>
+  {# One published CV is the norm, so present it plainly: no variant name, no
+     internal description — just the actions. The multi-card layout below is a
+     fallback for the day more than one cut is made public. #}
+  {% if cards | length == 1 %}
+    {% set c = cards[0] %}
+    <div class="actions solo">
+      <a class="btn primary" href="{{ c.pdf }}" download="{{ b.name }} - CV.pdf">Download PDF</a>
+      <a class="btn" href="{{ c.html }}">View in browser</a>
+      <span class="size">{{ c.size }}</span>
+    </div>
+  {% else %}
+    <div class="cards">
+      {% for c in cards %}
+      <section class="card">
+        <h2>{{ c.name }}</h2>
+        {% if c.description %}<p>{{ c.description }}</p>{% endif %}
+        <div class="actions">
+          <a class="btn primary" href="{{ c.pdf }}">Download PDF</a>
+          <a class="btn" href="{{ c.html }}">View in browser</a>
+          <span class="size">{{ c.size }}</span>
+        </div>
+      </section>
+      {% endfor %}
+    </div>
+  {% endif %}
 
   <footer>
     Built from

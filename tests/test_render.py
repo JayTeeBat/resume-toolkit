@@ -102,6 +102,16 @@ def test_colophon_survives_a_resume_with_no_meta_block() -> None:
     assert "latest at" not in html
 
 
+def test_html_head_carries_an_initials_favicon() -> None:
+    """The HTML export is opened in browser tabs (the index links it), and a
+    tab with the default globe icon is a tab you cannot find again."""
+    html = render_html({"basics": {"name": "Ada King Lovelace"}})
+
+    assert 'rel="icon"' in html
+    # First two initials, embedded in the SVG data URI ("%3E" encodes ">").
+    assert "%3EAK%3C" in html
+
+
 def test_render_inlines_fonts_and_styles() -> None:
     html = render_html({"basics": {"name": "Ada"}})
 

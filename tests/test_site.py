@@ -142,3 +142,45 @@ def test_index_head_carries_link_preview_and_person_markup(built, resume) -> Non
     assert person["@type"] == "Person"
     assert person["name"] == resume["basics"]["name"]
     assert person["jobTitle"] == resume["basics"]["label"]
+
+    assert 'rel="icon"' in index
+
+
+@pytest.mark.slow
+def test_404_routes_the_lost_back_to_the_index(built, resume) -> None:
+    """Pages serves 404.html for any dead path — a bookmarked artifact of an
+    old cut must land on an exit, not a GitHub-branded wall."""
+    written, out = built
+    page = (out / "404.html").read_text(encoding="utf-8")
+
+    canonical = resume["meta"]["canonical"]
+    assert f'href="{canonical}"' in page
+    # A dead-end page must never rank in search results.
+    assert 'name="robots" content="noindex"' in page
+
+
+@pytest.mark.slow
+def test_robots_allows_all_and_names_the_sitemap(built, resume) -> None:
+    written, out = built
+    robots = (out / "robots.txt").read_text(encoding="utf-8")
+
+    assert "User-agent: *" in robots
+    assert "Allow: /" in robots
+    assert f"Sitemap: {resume['meta']['canonical'].rstrip('/')}/sitemap.xml" in robots
+
+
+@pytest.mark.slow
+def test_sitemap_lists_the_index_and_every_published_page(built, resume) -> None:
+    """Parsed as XML, not grepped: a malformed sitemap is silently ignored by
+    crawlers, which is the failure mode this test exists to prevent."""
+    import xml.etree.ElementTree as ET
+
+    written, out = built
+    tree = ET.parse(out / "sitemap.xml")
+    ns = "{http://www.sitemaps.org/schemas/sitemap/0.9}"
+    locs = {el.text for el in tree.iter(f"{ns}loc")}
+
+    base = resume["meta"]["canonical"].rstrip("/") + "/"
+    assert base in locs
+    for variant in _published():
+        assert f"{base}resume-{variant}.html" in locs

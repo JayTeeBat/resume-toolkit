@@ -1,0 +1,66 @@
+{#
+  GitHub Pages serves this for any path that doesn't exist — a typo'd link, or
+  an artifact from an old cut someone bookmarked (a renamed variant's PDF, say).
+  Its one job is routing the lost reader to the current CV, so it is deliberately
+  a fraction of the index: same palette, one message, one button.
+#}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>{{ resume.basics.name }} — not found</title>
+{% set initials = (resume.basics.name.split() | map('first') | join(''))[:2] %}
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231f4e79'/%3E%3Ctext x='32' y='44' font-family='system-ui,sans-serif' font-size='30' font-weight='700' text-anchor='middle' fill='%23fff'%3E{{ initials }}%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg:      #f4f6f8;
+    --card:    #ffffff;
+    --ink:     #1a1a1a;
+    --soft:    #4a4a4a;
+    --accent:  #1f4e79;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:     #14171a;
+      --card:   #1d2125;
+      --ink:    #e8eaed;
+      --soft:   #b4b8bd;
+      --accent: #7db3e0;
+    }
+  }
+  body {
+    margin: 0;
+    padding: 4rem 1.25rem;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    line-height: 1.5;
+  }
+  main { max-width: 34rem; margin: 0 auto; }
+  h1 { margin: 0; font-size: 1.6rem; letter-spacing: -0.02em; color: var(--accent); }
+  p { color: var(--soft); }
+  .btn {
+    display: inline-block;
+    margin-top: .5rem;
+    padding: .45rem .9rem;
+    border-radius: 6px;
+    background: var(--accent);
+    color: var(--card);
+    font-size: .9rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Nothing at this address</h1>
+  <p>The file you followed a link to doesn't exist here — it may belong to an
+  older cut of this CV. The current version, in every published format, is one
+  click away.</p>
+  <a class="btn" href="{{ (resume.get('meta') or {}).get('canonical') or './' }}">Go to the current CV</a>
+</main>
+</body>
+</html>

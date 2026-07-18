@@ -21,9 +21,11 @@ from .build import Artifact, build_variant
 from .paths import DIST_DIR, REPO_ROOT, SITE_DIR
 from .render import location, urlhost
 from .variants import Variant, load_variants
+from .version import build_stamp
 
 INDEX_TEMPLATE = "index.html.j2"
 LLMS_TEMPLATE = "llms.txt.j2"
+NOT_FOUND_TEMPLATE = "404.html.j2"
 
 
 def _human_size(num_bytes: int) -> str:
@@ -127,6 +129,34 @@ def _render_llms(resume: dict, cards: list[dict]) -> str:
     return _site_env().get_template(LLMS_TEMPLATE).render(resume=resume, cards=cards)
 
 
+def _robots(canonical: str | None) -> str:
+    """robots.txt: everything is meant to be found, so allow all and point at
+    the sitemap (which needs absolute URLs, hence only when canonical is set)."""
+    lines = ["User-agent: *", "Allow: /"]
+    if canonical:
+        lines += ["", f"Sitemap: {canonical.rstrip('/')}/sitemap.xml"]
+    return "\n".join(lines) + "\n"
+
+
+def _sitemap(canonical: str, cards: list[dict], modified: str | None) -> str:
+    """The index plus every published variant's HTML — the pages worth crawling.
+
+    PDFs, JSON and Markdown are downloads, not pages; the index links them and
+    crawlers follow. lastmod comes from the content's git date, so it tells the
+    truth the way the colophon does.
+    """
+    base = canonical.rstrip("/") + "/"
+    lastmod = f"<lastmod>{modified}</lastmod>" if modified else ""
+    urls = [base] + [base + c["html"] for c in cards]
+    entries = "\n".join(f"  <url><loc>{u}</loc>{lastmod}</url>" for u in urls)
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        f"{entries}\n"
+        "</urlset>\n"
+    )
+
+
 def build_site(
     resume: dict,
     *,
@@ -141,9 +171,10 @@ def build_site(
     tailored to one employer never leaks onto a public URL. Card order follows
     variants.toml, so reordering the file reorders the page.
 
-    Beyond the variants, the site gets three discovery files: index.html (the
-    human front door), /resume.json (the guessable machine address — an alias
-    of the primary cut), and /llms.txt (the note an AI agent reads first).
+    Beyond the variants, the site gets its front matter: index.html (the human
+    front door), /resume.json (the guessable machine address — an alias of the
+    primary cut), /llms.txt (the note an AI agent reads first), 404.html (the
+    route back for dead links), and robots.txt + sitemap.xml (crawler guidance).
     """
     variants = [v for v in load_variants().values() if v.publish]
     if not variants:
@@ -177,5 +208,26 @@ def build_site(
     llms = out_dir / "llms.txt"
     llms.write_text(_render_llms(resume, cards), encoding="utf-8")
     written.append(Artifact("llms", "txt", llms))
+
+    # Pages serves 404.html for any missing path — e.g. a bookmarked artifact
+    # of a since-renamed variant. Its one job is routing back to the index.
+    not_found = out_dir / "404.html"
+    not_found.write_text(
+        _site_env().get_template(NOT_FOUND_TEMPLATE).render(resume=resume), encoding="utf-8"
+    )
+    written.append(Artifact("404", "html", not_found))
+
+    canonical = (resume.get("meta") or {}).get("canonical")
+    robots = out_dir / "robots.txt"
+    robots.write_text(_robots(canonical), encoding="utf-8")
+    written.append(Artifact("robots", "txt", robots))
+
+    if canonical:
+        stamp = build_stamp()
+        sitemap = out_dir / "sitemap.xml"
+        sitemap.write_text(
+            _sitemap(canonical, cards, stamp.modified if stamp else None), encoding="utf-8"
+        )
+        written.append(Artifact("sitemap", "xml", sitemap))
 
     return written

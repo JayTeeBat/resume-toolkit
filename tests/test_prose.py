@@ -8,6 +8,11 @@ public one-pager. Judgment calls (is this bullet vague?) stay with humans;
 nothing in this file should ever need interpretation to stay green.
 
 The rules are data-driven: extend the gate by extending the lists below.
+
+There is deliberately no auto-fix, so a failure message must carry
+everything needed to make the edit: which entry, the offending text, and
+what to write instead. If locating a violation ever requires searching
+resume.json by hand, that is a bug in this file.
 """
 
 from __future__ import annotations
@@ -100,6 +105,47 @@ NON_PROSE_KEYS = {"$schema", "canonical", "countryCode", "email", "postalCode", 
 PUBLISHED_VARIANT = "short"
 
 
+# --- violation reporting -----------------------------------------------------
+#
+# Every gate reports through fail_with(), one block per violation:
+#
+#     where:  $.work[0].highlights[1]  (Analytical Engines — Lead Engineer)
+#     text:   "…engine notes for the research group (100+ pages)"
+#     fix:    add a final period
+#
+# `where` is the JSON path plus, for work entries, the company and position,
+# so the reader lands on the right entry without counting array indices.
+
+
+class Violation:
+    def __init__(self, where: str, text: str, fix: str) -> None:
+        self.where = where
+        self.text = text
+        self.fix = fix
+
+    def render(self) -> str:
+        return f"  where:  {self.where}\n  text:   {clip(self.text)}\n  fix:    {self.fix}"
+
+
+def fail_with(rule: str, violations: list[Violation]) -> None:
+    if not violations:
+        return
+    blocks = "\n\n".join(v.render() for v in violations)
+    pytest.fail(f"{rule} — {len(violations)} violation(s):\n\n{blocks}", pytrace=False)
+
+
+def clip(text: str, width: int = 70) -> str:
+    """Quote text for a failure message, eliding the middle of long strings."""
+    if len(text) <= width:
+        return f'"{text}"'
+    head, tail = width // 2, width // 2
+    return f'"{text[:head]}…{text[-tail:]}"'
+
+
+def entry_label(entry: dict) -> str:
+    return f"{entry.get('name', '?')} — {entry.get('position', '?')}"
+
+
 # --- helpers -----------------------------------------------------------------
 
 
@@ -122,13 +168,14 @@ def iter_strings(node, path: str = "$") -> Iterator[tuple[str, str]]:
 
 
 def iter_sentences(resume: dict) -> Iterator[tuple[str, str]]:
-    """Yield (json_path, text) for strings that must read as sentences."""
+    """Yield (where, text) for strings that must read as sentences."""
     yield "$.basics.summary", resume["basics"]["summary"]
     for i, entry in enumerate(resume["work"]):
+        label = entry_label(entry)
         if "summary" in entry:
-            yield f"$.work[{i}].summary", entry["summary"]
+            yield f"$.work[{i}].summary  ({label})", entry["summary"]
         for j, highlight in enumerate(entry.get("highlights", [])):
-            yield f"$.work[{i}].highlights[{j}]", highlight
+            yield f"$.work[{i}].highlights[{j}]  ({label})", highlight
 
 
 def first_word(text: str) -> str:
@@ -136,49 +183,62 @@ def first_word(text: str) -> str:
     return match.group() if match else ""
 
 
+def match_context(text: str, match: re.Match[str], margin: int = 20) -> str:
+    """The matched text with enough surrounding context to find it."""
+    lo = max(0, match.start() - margin)
+    hi = min(len(text), match.end() + margin)
+    prefix = "…" if lo > 0 else ""
+    suffix = "…" if hi < len(text) else ""
+    return f"{prefix}{text[lo:hi]}{suffix}"
+
+
 # --- gates -------------------------------------------------------------------
 
 
 def test_sentences_end_with_a_period(resume) -> None:
-    missing = [path for path, text in iter_sentences(resume) if not text.endswith(".")]
-    assert not missing, f"sentences without a terminal period: {missing}"
+    violations = [
+        Violation(where, text, "add a final period")
+        for where, text in iter_sentences(resume)
+        if not text.endswith(".")
+    ]
+    fail_with("end-of-sentence period missing", violations)
 
 
 def test_no_us_spellings(resume) -> None:
-    pattern = re.compile("|".join(US_SPELLING_STEMS), re.IGNORECASE)
-    hits = [
-        (path, match.group())
-        for path, text in iter_strings(resume)
-        if (match := pattern.search(text))
+    pattern = re.compile(r"\w*(?:" + "|".join(US_SPELLING_STEMS) + r")\w*", re.IGNORECASE)
+    violations = [
+        Violation(where, match_context(text, m), f'replace "{m.group()}" with its UK spelling')
+        for where, text in iter_strings(resume)
+        if (m := pattern.search(text))
     ]
-    assert not hits, f"US spellings in a UK-spelling document: {hits}"
+    fail_with("US spelling in a UK-spelling document", violations)
 
 
 def test_proper_names_are_cased_correctly(resume) -> None:
-    hits = [
-        (path, wrong)
-        for path, text in iter_strings(resume)
-        for wrong in CASING
+    violations = [
+        Violation(where, text, f'write "{right}", not "{wrong}"')
+        for where, text in iter_strings(resume)
+        for wrong, right in CASING.items()
         if wrong in text
     ]
-    assert not hits, f"miscased names (see CASING for the true form): {hits}"
+    fail_with("miscased proper name", violations)
 
 
 def test_typography(resume) -> None:
     rules = (
-        ("double space", re.compile(r"  ")),
-        ("stray leading/trailing whitespace", re.compile(r"^\s|\s$")),
-        ("'*' as a multiplication sign (use ×)", re.compile(r"\d\s*\*|\*\s*\d")),
-        ("letter 'x' as a multiplication sign (use ×)", re.compile(r"\d\s*x\s*\d")),
-        ("currency symbol after the amount (write €5, not 5€)", re.compile(r"\d\s*[€$£]")),
+        ("collapse the double space", re.compile(r"  ")),
+        ("strip the leading/trailing whitespace", re.compile(r"^\s|\s$")),
+        ("write × for multiplication, not '*'", re.compile(r"\d\s*\*|\*\s*\d")),
+        ("write × for multiplication, not the letter 'x'", re.compile(r"\d\s*x\s*\d")),
+        ("put the currency symbol before the amount (€5, not 5€)", re.compile(r"\d\s*[€$£]")),
     )
-    hits = [
-        (path, why)
-        for path, text in iter_strings(resume)
-        for why, pattern in rules
-        if pattern.search(text)
+    violations = [
+        Violation(where, match_context(text, m), fix)
+        for where, text in iter_strings(resume)
+        for fix, pattern in rules
+        if (m := pattern.search(text))
     ]
-    assert not hits, f"typography violations: {hits}"
+    fail_with("typography", violations)
 
 
 def test_tense_matches_the_role(resume) -> None:
@@ -187,33 +247,45 @@ def test_tense_matches_the_role(resume) -> None:
     summaries pass through unexamined — this catches drift, it does not prove
     completeness.
     """
-    wrong: list[tuple[str, str]] = []
+    violations: list[Violation] = []
     for i, entry in enumerate(resume["work"]):
         current = "endDate" not in entry
-        texts = [(f"$.work[{i}].summary", entry["summary"])] if "summary" in entry else []
+        label = entry_label(entry)
+        texts = [(f"$.work[{i}].summary  ({label})", entry["summary"])] if "summary" in entry else []
         texts += [
-            (f"$.work[{i}].highlights[{j}]", h) for j, h in enumerate(entry.get("highlights", []))
+            (f"$.work[{i}].highlights[{j}]  ({label})", h)
+            for j, h in enumerate(entry.get("highlights", []))
         ]
-        for path, text in texts:
+        for where, text in texts:
             word = first_word(text)
             looks_present = word in PRESENT_VERBS
             looks_past = word in IRREGULAR_PAST or word.endswith("ed")
             if current and looks_past and not looks_present:
-                wrong.append((path, f"'{word}' is past tense in the current role"))
+                violations.append(
+                    Violation(where, text, f'"{word}" is past tense — the current role reads in the present')
+                )
             elif not current and looks_present and not looks_past:
-                wrong.append((path, f"'{word}' is present tense in a past role"))
-    assert not wrong, f"tense drift: {wrong}"
+                violations.append(
+                    Violation(where, text, f'"{word}" is present tense — past roles read in the past')
+                )
+    fail_with("tense drift", violations)
 
 
 def test_published_entries_are_quantified(resume) -> None:
     """Every work entry on the public one-pager carries at least one figure."""
     cut = apply_variant(resume, get_variant(PUBLISHED_VARIANT))
-    unquantified = [
-        f"$.work[{i}] ({entry['name']} — {entry['position']})"
+    violations = [
+        Violation(
+            f"$.work[{i}]  ({entry_label(entry)})",
+            entry.get("summary", "(no summary)"),
+            "add at least one concrete figure (scale, spec, cost, accuracy…) or tag the entry out of the published cut",
+        )
         for i, entry in enumerate(cut["work"])
-        if not any(c.isdigit() for c in entry.get("summary", "") + " ".join(entry.get("highlights", [])))
+        if not any(
+            c.isdigit() for c in entry.get("summary", "") + " ".join(entry.get("highlights", []))
+        )
     ]
-    assert not unquantified, f"published entries without a single figure: {unquantified}"
+    fail_with("published entry has no figure at all", violations)
 
 
 @pytest.mark.slow

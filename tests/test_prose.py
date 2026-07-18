@@ -244,6 +244,7 @@ def test_typography(resume) -> None:
     rules = (
         ("collapse the double space", re.compile(r"  ")),
         ("strip the leading/trailing whitespace", re.compile(r"^\s|\s$")),
+        ("write an em dash (—), not a spaced hyphen", re.compile(r" - ")),
         ("write × for multiplication, not '*'", re.compile(r"\d\s*\*|\*\s*\d")),
         ("write × for multiplication, not the letter 'x'", re.compile(r"\d\s*x\s*\d")),
         ("put the currency symbol before the amount (€5, not 5€)", re.compile(r"\d\s*[€$£]")),

@@ -10,6 +10,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{ resume.basics.name }} — CV</title>
 <meta name="description" content="{{ resume.basics.label }}">
+{# Link previews: this URL is what gets pasted into LinkedIn and messengers,
+   and without og: tags those render it as a bare link. #}
+{% set canonical = (resume.get('meta') or {}).get('canonical') %}
+<meta property="og:type" content="profile">
+<meta property="og:title" content="{{ resume.basics.name }} — CV">
+<meta property="og:description" content="{{ resume.basics.label }}">
+{% if canonical %}
+<meta property="og:url" content="{{ canonical }}">
+<link rel="canonical" href="{{ canonical }}">
+{% endif %}
+<meta name="twitter:card" content="summary">
+{# Pre-serialized schema.org/Person (see _json_ld) — what search engines read. #}
+<script type="application/ld+json">{{ json_ld }}</script>
 <style>
   :root {
     --bg:      #f4f6f8;
@@ -131,6 +144,7 @@
       <a class="btn primary" href="{{ c.pdf }}" download="{{ b.name }} - CV.pdf">Download PDF</a>
       <a class="btn" href="{{ c.html }}">View in browser</a>
       <a class="btn" href="{{ c.json }}" title="Machine-readable JSON Resume, same cut as the PDF">JSON</a>
+      <a class="btn" href="{{ c.md }}" title="Paste-ready Markdown, same cut as the PDF">Markdown</a>
       <span class="size">{{ c.size }}</span>
     </div>
   {% else %}
@@ -143,6 +157,7 @@
           <a class="btn primary" href="{{ c.pdf }}">Download PDF</a>
           <a class="btn" href="{{ c.html }}">View in browser</a>
           <a class="btn" href="{{ c.json }}" title="Machine-readable JSON Resume, same cut as the PDF">JSON</a>
+          <a class="btn" href="{{ c.md }}" title="Paste-ready Markdown, same cut as the PDF">Markdown</a>
           <span class="size">{{ c.size }}</span>
         </div>
       </section>

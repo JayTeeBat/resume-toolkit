@@ -1,10 +1,18 @@
-"""HTML rendering and its date/location helpers."""
+"""HTML/Markdown rendering and its date/location helpers."""
 
 from __future__ import annotations
 
 import pytest
 
-from resume_toolkit.render import UnknownTheme, daterange, location, pdate, render_html, urlhost
+from resume_toolkit.render import (
+    UnknownTheme,
+    daterange,
+    location,
+    pdate,
+    render_html,
+    render_markdown,
+    urlhost,
+)
 from resume_toolkit.version import Stamp
 
 
@@ -112,3 +120,52 @@ def test_render_escapes_content() -> None:
 def test_unknown_theme_names_the_known_ones() -> None:
     with pytest.raises(UnknownTheme, match="classic"):
         render_html({"basics": {"name": "Ada"}}, theme="no-such-theme")
+
+
+def test_markdown_render_is_plain_text_not_escaped_html() -> None:
+    """The whole point of the format is pasting it somewhere; '&amp;' in an
+    ATS form field would be a visible bug."""
+    md = render_markdown(
+        {
+            "basics": {"name": "Ada Lovelace", "label": "R&D Lead", "summary": "Did X."},
+            "work": [
+                {
+                    "name": "Analytical Engines",
+                    "position": "Engineer",
+                    "startDate": "1842-01",
+                    "highlights": ["Programmed the engine."],
+                }
+            ],
+        }
+    )
+
+    assert md.startswith("# Ada Lovelace")
+    assert "R&D Lead" in md
+    assert "&amp;" not in md
+    assert "### Engineer — Analytical Engines (Jan 1842 – Present)" in md
+    assert "- Programmed the engine." in md
+
+
+def test_markdown_omits_sections_absent_from_the_document() -> None:
+    md = render_markdown({"basics": {"name": "Ada"}})
+
+    assert "Experience" not in md
+    assert "Awards" not in md
+
+
+def test_markdown_colophon_identifies_the_cut_and_the_build() -> None:
+    md = render_markdown(
+        {"basics": {"name": "Ada"}, "meta": {"source": "https://github.com/ada/cv"}},
+        variant="acme",
+        stamp=Stamp(version="2026.07.16+g942700c", modified="2026-07-16", dirty=False),
+    )
+
+    assert "acme cut" in md
+    assert "2026.07.16+g942700c" in md
+    assert "resume-as-code: https://github.com/ada/cv" in md
+
+
+def test_markdown_without_provenance_has_no_dangling_rule() -> None:
+    md = render_markdown({"basics": {"name": "Ada"}})
+
+    assert "---" not in md

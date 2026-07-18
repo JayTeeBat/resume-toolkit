@@ -6,6 +6,9 @@ they have to exist), which is why they carry the slow marker.
 
 from __future__ import annotations
 
+import json
+import re
+
 import pytest
 from markupsafe import escape
 
@@ -60,9 +63,8 @@ def test_site_builds_an_index_and_every_published_variant(built) -> None:
 
     assert "index.html" in names
     for variant in _published():
-        assert f"resume-{variant}.pdf" in names
-        assert f"resume-{variant}.html" in names
-        assert f"resume-{variant}.json" in names
+        for fmt in ("pdf", "html", "json", "md"):
+            assert f"resume-{variant}.{fmt}" in names
 
 
 @pytest.mark.slow
@@ -72,7 +74,7 @@ def test_unpublished_variants_never_reach_the_site(built) -> None:
     names = {a.path.name for a in written}
 
     for variant in _unpublished():
-        for fmt in ("pdf", "html", "json"):
+        for fmt in ("pdf", "html", "json", "md"):
             assert f"resume-{variant}.{fmt}" not in names
             assert not (out / f"resume-{variant}.{fmt}").exists()
 
@@ -84,7 +86,7 @@ def test_index_links_resolve_to_files_that_exist(built) -> None:
     index = (out / "index.html").read_text(encoding="utf-8")
 
     for variant in _published():
-        for fmt in ("pdf", "html", "json"):
+        for fmt in ("pdf", "html", "json", "md"):
             target = f"resume-{variant}.{fmt}"
             assert f'href="{target}"' in index, f"index.html does not link {target}"
             assert (out / target).is_file()
@@ -99,3 +101,44 @@ def test_index_carries_real_identity(built, resume) -> None:
     # a label containing "&" appears as "&amp;".
     assert str(escape(resume["basics"]["name"])) in index
     assert str(escape(resume["basics"]["label"])) in index
+
+
+@pytest.mark.slow
+def test_canonical_resume_json_alias_matches_the_primary_cut(built) -> None:
+    """/resume.json is the guessable machine address. Byte-identical to the
+    primary published cut, so the alias and the named file can never drift."""
+    written, out = built
+    primary = _published()[0]
+    alias = out / "resume.json"
+
+    assert alias.is_file()
+    assert alias.read_bytes() == (out / f"resume-{primary}.json").read_bytes()
+
+
+@pytest.mark.slow
+def test_llms_txt_points_agents_at_the_canonical_json(built, resume) -> None:
+    written, out = built
+    llms = (out / "llms.txt").read_text(encoding="utf-8")
+
+    assert llms.startswith(f"# {resume['basics']['name']}")
+    assert "resume.json" in llms
+    # Plain text, not autoescaped HTML: a label's "&" must survive as "&".
+    assert "&amp;" not in llms
+
+
+@pytest.mark.slow
+def test_index_head_carries_link_preview_and_person_markup(built, resume) -> None:
+    """og: tags decide what a pasted link looks like; the JSON-LD Person is
+    what search engines index. Both must describe the real person."""
+    written, out = built
+    index = (out / "index.html").read_text(encoding="utf-8")
+
+    assert 'property="og:title"' in index
+    assert 'property="og:description"' in index
+
+    match = re.search(r'<script type="application/ld\+json">(.*?)</script>', index, re.S)
+    assert match, "index.html has no JSON-LD block"
+    person = json.loads(match.group(1))
+    assert person["@type"] == "Person"
+    assert person["name"] == resume["basics"]["name"]
+    assert person["jobTitle"] == resume["basics"]["label"]

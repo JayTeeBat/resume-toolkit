@@ -1,0 +1,139 @@
+{#
+  The paste-ready cut of template.html.j2: same data, same section order —
+  this file is the theme's editorial opinion restated as Markdown, for the
+  places styled output cannot go (ATS forms, plain-text email, LLM prompts).
+  Rendered without autoescape: Markdown is plain text and '&' must stay '&'.
+#}
+{% set b = resume.basics %}
+# {{ b.name }}
+
+{% if b.label %}
+{{ b.label }}
+
+{% endif %}
+{% set contact = ([b.email, b.phone, b.location | location, b.url | urlhost] | select | list)
+   + ((b.profiles or []) | map(attribute='url') | select | list) %}
+{% if contact %}
+{{ contact | join(' · ') }}
+
+{% endif %}
+{% if b.summary %}
+{{ b.summary }}
+
+{% endif %}
+{% if resume.skills %}
+## Core Engineering Capabilities
+
+{% for s in resume.skills %}
+- **{{ s.name }}**{% if s.level %} ({{ s.level }}){% endif %}: {{ (s.keywords or []) | join(', ') }}
+{% endfor %}
+
+{% endif %}
+{% if resume.work %}
+## Professional Experience
+
+{% for job in resume.work %}
+{# Line-final tags end in `+%}`: trim_blocks would otherwise eat the newline
+   and weld this line onto the next one. #}
+### {{ job.position }}{% if job.name %} — {{ job.name }}{% endif %}{% if job | daterange %} ({{ job | daterange }}){% endif +%}
+
+{% if job.location %}
+{{ job.location }}
+
+{% endif %}
+{% if job.summary %}
+{{ job.summary }}
+
+{% endif %}
+{% if job.highlights %}
+{% for h in job.highlights %}
+- {{ h }}
+{% endfor %}
+
+{% endif %}
+{% endfor %}
+{% endif %}
+{% if resume.projects %}
+## Projects
+
+{% for p in resume.projects %}
+### {{ p.name }}{% if p | daterange %} ({{ p | daterange }}){% endif +%}
+
+{% if p.description %}
+{{ p.description }}
+
+{% endif %}
+{% for h in p.highlights or [] %}
+- {{ h }}
+{% endfor %}
+{% endfor %}
+
+{% endif %}
+{% if resume.education %}
+## Education
+
+{% for e in resume.education %}
+- **{{ e.institution }}**{% if e.studyType or e.area %} — {{ [e.studyType, e.area] | select | join(', ') }}{% endif %}{% if e | daterange %} ({{ e | daterange }}){% endif %}{% if e.score %} — {{ e.score }}{% endif +%}
+{% endfor %}
+
+{% endif %}
+{% if resume.certificates %}
+## Certifications
+
+{% for c in resume.certificates %}
+- **{{ c.name }}**{% if c.issuer %} — {{ c.issuer }}{% endif %}{% if c.date %} ({{ c.date | pdate }}){% endif +%}
+{% endfor %}
+
+{% endif %}
+{% if resume.languages %}
+## Languages
+
+{% for l in resume.languages %}
+- **{{ l.language }}**: {{ l.fluency }}
+{% endfor %}
+
+{% endif %}
+{% if resume.publications %}
+## Publications
+
+{% for p in resume.publications %}
+- {{ p.name }}{% if p.publisher %} — {{ p.publisher }}{% endif %}{% if p.releaseDate %} ({{ p.releaseDate | pdate }}){% endif +%}
+{% endfor %}
+
+{% endif %}
+{% if resume.awards %}
+## Awards
+
+{% for a in resume.awards %}
+- **{{ a.title }}**{% if a.awarder %} — {{ a.awarder }}{% endif %}{% if a.date %} ({{ a.date | pdate }}){% endif +%}
+{% endfor %}
+
+{% endif %}
+{% if resume.volunteer %}
+## Volunteering
+
+{% for v in resume.volunteer %}
+- **{{ v.position }}**{% if v.organization %} — {{ v.organization }}{% endif %}{% if v | daterange %} ({{ v | daterange }}){% endif +%}
+{% endfor %}
+
+{% endif %}
+{% if resume.interests %}
+## Interests
+
+{% for i in resume.interests %}
+- **{{ i.name }}**{% if i.keywords %}: {{ i.keywords | join(', ') }}{% endif +%}
+{% endfor %}
+
+{% endif %}
+{% set canonical = (resume.get('meta') or {}).get('canonical') %}
+{% set source = (resume.get('meta') or {}).get('source') %}
+{% if variant or stamp or canonical or source %}
+---
+
+{{ [
+     (variant ~ ' cut') if variant else None,
+     stamp.version if stamp else None,
+     ('latest at ' ~ canonical) if canonical else None,
+     ('resume-as-code: ' ~ source) if source else None,
+   ] | select | join(' · ') }}
+{% endif %}

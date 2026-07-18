@@ -109,6 +109,24 @@ def test_json_build_is_a_valid_json_resume_with_provenance(resume, tmp_path) -> 
     assert "version" in meta and "lastModified" in meta
 
 
+def test_markdown_build_writes_the_variant_cut(resume, tmp_path) -> None:
+    """Same conformity bar as the JSON: the paste-ready cut must not carry
+    what the variant drops."""
+    short = get_variant("short")
+    written = build_variant(resume, short, formats=("md",), out_dir=tmp_path)
+
+    assert [(a.variant, a.fmt) for a in written] == [("short", "md")]
+    md = written[0].path.read_text(encoding="utf-8")
+
+    assert md.startswith(f"# {resume['basics']['name']}")
+    dropped = [
+        w for w in resume["work"]
+        if w.get("x-tags") and not (set(w["x-tags"]) & short.include)
+    ]
+    for entry in dropped:
+        assert entry["position"] not in md, f"{entry['position']} leaked into the Markdown"
+
+
 @pytest.mark.slow
 def test_pdf_build_produces_an_a4_document_with_extractable_text(resume, tmp_path) -> None:
     pypdf = pytest.importorskip("pypdf")

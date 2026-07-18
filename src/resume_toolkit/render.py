@@ -74,10 +74,10 @@ def urlhost(url: str | None) -> str:
     return re.sub(r"^https?://(www\.)?", "", url).rstrip("/")
 
 
-def _environment(theme_path: Path) -> Environment:
+def _environment(theme_path: Path, *, autoescape: bool = True) -> Environment:
     env = Environment(
         loader=FileSystemLoader(theme_path),
-        autoescape=True,
+        autoescape=autoescape,
         trim_blocks=True,
         lstrip_blocks=True,
         # Default Undefined, deliberately: most schema sections are optional, so
@@ -135,6 +135,29 @@ def render_html(
     return template.render(
         resume=resume,
         stylesheet=_inline_stylesheet(path),
+        generated=date.today().isoformat(),
+        variant=variant,
+        stamp=stamp,
+    )
+
+
+def render_markdown(
+    resume: dict,
+    theme: str = "classic",
+    *,
+    variant: str | None = None,
+    stamp: Stamp | None = None,
+) -> str:
+    """Render resume data to a paste-ready Markdown document.
+
+    The format exists for the places styled output cannot go: ATS web forms,
+    plain-text emails, LLM contexts. It follows the theme's template.md.j2 so
+    section order stays the theme's editorial call, like the HTML. Autoescape
+    is off — Markdown is plain text, and '&' must stay '&'.
+    """
+    env = _environment(theme_dir(theme), autoescape=False)
+    return env.get_template("template.md.j2").render(
+        resume=resume,
         generated=date.today().isoformat(),
         variant=variant,
         stamp=stamp,

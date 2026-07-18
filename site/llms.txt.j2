@@ -1,0 +1,39 @@
+{#
+  /llms.txt (https://llmstxt.org/) — the note an AI agent reads before the
+  HTML. Recruiters paste CV links into AI tools; this file steers the tool to
+  the canonical JSON instead of letting it scrape the styled page. Plain text:
+  rendered without autoescape, see _site_env().
+#}
+{% set b = resume.basics %}
+{% set base = (resume.get('meta') or {}).get('canonical') or '' %}
+# {{ b.name }} — CV
+
+> {{ b.label }}
+
+{% if b.summary %}
+{{ b.summary }}
+
+{% endif %}
+This site serves one CV in equivalent formats, all built from the same JSON
+Resume source. Every format of a given cut says exactly the same thing; for
+machine consumption, prefer the JSON.
+
+## Machine-readable
+
+- [resume.json]({{ base }}resume.json): canonical JSON Resume (v1.0.0 schema), the published cut, with build provenance in `meta`
+
+## Other formats
+
+{% for c in cards %}
+- [{{ c.pdf }}]({{ base }}{{ c.pdf }}): print-ready PDF{% if c.description %} — {{ c.description }}{% endif %}
+
+- [{{ c.html }}]({{ base }}{{ c.html }}): self-contained HTML
+- [{{ c.md }}]({{ base }}{{ c.md }}): Markdown
+{% endfor %}
+{% set source = (resume.get('meta') or {}).get('source') %}
+{% if source %}
+
+## Source
+
+- [{{ source | urlhost }}]({{ source }}): resume-as-code repository — the JSON source, variant system and CI quality gates behind this page
+{% endif %}

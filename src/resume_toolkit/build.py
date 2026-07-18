@@ -8,7 +8,7 @@ from pathlib import Path
 
 from .paths import DIST_DIR
 from .pdf import html_to_pdf
-from .render import render_html
+from .render import render_html, render_markdown
 from .variants import Variant, apply_variant
 from .version import build_stamp
 
@@ -61,5 +61,11 @@ def build_variant(
         path = out_dir / f"resume-{variant.name}.json"
         path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         written.append(Artifact(variant.name, "json", path))
+
+    if "md" in formats:
+        md = render_markdown(data, theme=theme, variant=variant.name, stamp=stamp)
+        path = out_dir / f"resume-{variant.name}.md"
+        path.write_text(md, encoding="utf-8")
+        written.append(Artifact(variant.name, "md", path))
 
     return written

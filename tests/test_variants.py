@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from resume_toolkit.variants import (
+    BadHighlightPattern,
     UnknownVariant,
     Variant,
     apply_variant,
@@ -79,6 +80,81 @@ def test_apply_variant_does_not_mutate_the_input() -> None:
     apply_variant(data, UNTAGGED_ONLY)
 
     assert data["work"] == [{"name": "Old", "x-tags": ["full"]}]
+
+
+def test_tagged_bullet_is_dropped_when_its_tag_is_not_included() -> None:
+    data = resume(
+        work=[
+            {
+                "name": "Core",
+                "highlights": ["Shipped X.", "Led Y."],
+                "x-highlights": {"Led Y": ["full"]},
+            }
+        ]
+    )
+
+    assert apply_variant(data, UNTAGGED_ONLY)["work"] == [
+        {"name": "Core", "highlights": ["Shipped X."]}
+    ]
+
+
+def test_tagged_bullet_survives_the_wildcard_and_sheds_its_rule() -> None:
+    """Themes must never have to know that variants exist — `x-highlights`
+    is stripped like `x-tags`."""
+    data = resume(
+        work=[
+            {
+                "name": "Core",
+                "highlights": ["Shipped X.", "Led Y."],
+                "x-highlights": {"Led Y": ["full"]},
+            }
+        ]
+    )
+
+    assert apply_variant(data, EVERYTHING)["work"] == [
+        {"name": "Core", "highlights": ["Shipped X.", "Led Y."]}
+    ]
+
+
+def test_highlight_pattern_matching_nothing_fails_loudly() -> None:
+    """A rule that silently stopped matching would silently republish the
+    bullet everywhere."""
+    data = resume(work=[{"name": "Core", "highlights": ["Shipped X."], "x-highlights": {"Led Y": ["full"]}}])
+
+    with pytest.raises(BadHighlightPattern, match="0 bullets"):
+        apply_variant(data, UNTAGGED_ONLY)
+
+
+def test_ambiguous_highlight_pattern_fails_loudly() -> None:
+    data = resume(
+        work=[
+            {
+                "name": "Core",
+                "highlights": ["Led X.", "Led Y."],
+                "x-highlights": {"Led": ["full"]},
+            }
+        ]
+    )
+
+    with pytest.raises(BadHighlightPattern, match="2 bullets"):
+        apply_variant(data, EVERYTHING)
+
+
+def test_highlight_filtering_does_not_mutate_the_input() -> None:
+    data = resume(
+        work=[
+            {
+                "name": "Core",
+                "highlights": ["Shipped X.", "Led Y."],
+                "x-highlights": {"Led Y": ["full"]},
+            }
+        ]
+    )
+
+    apply_variant(data, UNTAGGED_ONLY)
+
+    assert data["work"][0]["highlights"] == ["Shipped X.", "Led Y."]
+    assert "x-highlights" in data["work"][0]
 
 
 def test_repo_variants_toml_loads() -> None:

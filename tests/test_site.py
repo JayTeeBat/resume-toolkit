@@ -7,6 +7,7 @@ they have to exist), which is why they carry the slow marker.
 from __future__ import annotations
 
 import pytest
+from markupsafe import escape
 
 from resume_toolkit import site as site_mod
 from resume_toolkit.model import load_resume
@@ -93,5 +94,7 @@ def test_index_carries_real_identity(built, resume) -> None:
     written, out = built
     index = (out / "index.html").read_text(encoding="utf-8")
 
-    assert resume["basics"]["name"] in index
-    assert resume["basics"]["label"] in index
+    # The page is autoescaped HTML, so compare against the escaped form —
+    # a label containing "&" appears as "&amp;".
+    assert str(escape(resume["basics"]["name"])) in index
+    assert str(escape(resume["basics"]["label"])) in index

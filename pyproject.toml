@@ -24,6 +24,8 @@ dev = [
     "pytest>=8.3.4",
     # Test-only: used to assert the built PDF's page geometry and text layer.
     "pypdf>=5.1.0",
+    # Typo gate (test_prose): catches the class the UK-spelling list cannot.
+    "codespell>=2.4.3",
 ]
 
 [build-system]
@@ -35,3 +37,10 @@ testpaths = ["tests"]
 markers = [
     "slow: drives a real Chromium; deselect with -m 'not slow'",
 ]
+
+[tool.codespell]
+# Vendored/generated content is not ours to spell-check.
+skip = "./.git,./.venv,./dist,./schema,./themes/classic/fonts,./uv.lock"
+# The deliberate 'utiliz' stem in the
+# UK-spelling denylist.
+ignore-words-list = "utiliz"

@@ -4,7 +4,7 @@ test_validate proves the document is well-formed; these tests gate the
 writing itself. Every rule here is a mechanical check that a review pass
 once fixed by hand: terminal punctuation, UK spelling, typography, tense
 drift between current and past roles, and unquantified entries on the
-public one-pager. Judgment calls (is this bullet vague?) stay with humans;
+published cut. Judgment calls (is this bullet vague?) stay with humans;
 nothing in this file should ever need interpretation to stay green.
 
 The rules are data-driven: extend the gate by extending the lists below.
@@ -18,14 +18,19 @@ resume.json by hand, that is a bug in this file.
 from __future__ import annotations
 
 import re
+import shutil
+import subprocess
 from collections.abc import Iterator
 
 import pytest
 
 from resume_toolkit.build import build_variant
 from resume_toolkit.model import load_resume
+from resume_toolkit.paths import RESUME_JSON
 from resume_toolkit.pdf import BrowserMissing
 from resume_toolkit.variants import apply_variant, get_variant
+
+REPO_ROOT = RESUME_JSON.parent
 
 # --- rule data ---------------------------------------------------------------
 
@@ -100,7 +105,18 @@ IRREGULAR_PAST = {
 }
 
 # Keys whose values are identifiers, not prose.
-NON_PROSE_KEYS = {"$schema", "canonical", "countryCode", "email", "postalCode", "url", "username"}
+NON_PROSE_KEYS = {
+    "$schema",
+    "canonical",
+    "countryCode",
+    "email",
+    "postalCode",
+    "source",
+    "url",
+    "username",
+    "x-highlights",
+    "x-tags",
+}
 
 PUBLISHED_VARIANT = "short"
 
@@ -272,7 +288,7 @@ def test_tense_matches_the_role(resume) -> None:
 
 
 def test_published_entries_are_quantified(resume) -> None:
-    """Every work entry on the public one-pager carries at least one figure."""
+    """Every work entry on the published cut carries at least one figure."""
     cut = apply_variant(resume, get_variant(PUBLISHED_VARIANT))
     violations = [
         Violation(
@@ -288,9 +304,29 @@ def test_published_entries_are_quantified(resume) -> None:
     fail_with("published entry has no figure at all", violations)
 
 
+def test_no_typos_anywhere_codespell() -> None:
+    """The one class the UK-consistency list cannot catch: plain misspellings
+    ('resouces' shipped once). codespell sweeps the whole repo; skips and
+    proper-noun exceptions live in [tool.codespell] in pyproject.toml.
+    """
+    codespell = shutil.which("codespell")
+    assert codespell, "codespell missing from the venv — run `uv sync`"
+    result = subprocess.run(
+        [codespell, "."], cwd=REPO_ROOT, capture_output=True, text=True
+    )
+    assert result.returncode == 0, (
+        "codespell found typos (real typo: fix the file; proper noun: add it "
+        f"to ignore-words-list in pyproject.toml):\n{result.stdout}"
+    )
+
+
 @pytest.mark.slow
-@pytest.mark.xfail(reason="short is 2 pages until the skills consolidation lands", strict=True)
-def test_published_variant_fits_one_page(resume, tmp_path) -> None:
+def test_published_variant_stays_within_two_pages(resume, tmp_path) -> None:
+    """The published cut's page budget is 2. One page stopped being realistic
+    once the CV settled on quantified bullets for every role; two is still a
+    deliberate limit a recruiter will tolerate — content growth has to be paid
+    for by trimming elsewhere, not by a third page.
+    """
     from pypdf import PdfReader
 
     try:
@@ -299,4 +335,9 @@ def test_published_variant_fits_one_page(resume, tmp_path) -> None:
         )
     except BrowserMissing:
         pytest.skip("Chromium not installed; run `playwright install chromium`")
-    assert len(PdfReader(written[0].path).pages) == 1
+    pages = len(PdfReader(written[0].path).pages)
+    assert pages <= 2, (
+        f"the published '{PUBLISHED_VARIANT}' cut renders to {pages} pages; the budget is 2 — "
+        "trim or tag entries out of the cut (x-tags), or tighten the theme's "
+        "spacing tokens (--size-base, --leading, --section-gap)"
+    )

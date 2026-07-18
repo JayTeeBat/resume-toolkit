@@ -78,6 +78,14 @@ def test_colophon_degrades_when_there_is_nothing_to_stamp() -> None:
     assert "<footer" not in html
 
 
+def test_colophon_claims_resume_as_code_when_meta_names_a_source() -> None:
+    """`meta.source` turns the footer into the resume-as-code claim + repo link."""
+    html = render_html({"basics": {"name": "Ada"}, "meta": {"source": "https://github.com/ada/cv"}})
+
+    assert "resume-as-code" in html
+    assert 'href="https://github.com/ada/cv"' in html
+
+
 def test_colophon_survives_a_resume_with_no_meta_block() -> None:
     """`meta` is optional in the schema; reaching through it must not raise."""
     html = render_html({"basics": {"name": "Ada"}}, variant="full")

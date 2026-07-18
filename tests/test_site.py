@@ -62,6 +62,7 @@ def test_site_builds_an_index_and_every_published_variant(built) -> None:
     for variant in _published():
         assert f"resume-{variant}.pdf" in names
         assert f"resume-{variant}.html" in names
+        assert f"resume-{variant}.json" in names
 
 
 @pytest.mark.slow
@@ -71,10 +72,9 @@ def test_unpublished_variants_never_reach_the_site(built) -> None:
     names = {a.path.name for a in written}
 
     for variant in _unpublished():
-        assert f"resume-{variant}.pdf" not in names
-        assert f"resume-{variant}.html" not in names
-        assert not (out / f"resume-{variant}.pdf").exists()
-        assert not (out / f"resume-{variant}.html").exists()
+        for fmt in ("pdf", "html", "json"):
+            assert f"resume-{variant}.{fmt}" not in names
+            assert not (out / f"resume-{variant}.{fmt}").exists()
 
 
 @pytest.mark.slow
@@ -84,7 +84,8 @@ def test_index_links_resolve_to_files_that_exist(built) -> None:
     index = (out / "index.html").read_text(encoding="utf-8")
 
     for variant in _published():
-        for target in (f"resume-{variant}.pdf", f"resume-{variant}.html"):
+        for fmt in ("pdf", "html", "json"):
+            target = f"resume-{variant}.{fmt}"
             assert f'href="{target}"' in index, f"index.html does not link {target}"
             assert (out / target).is_file()
 

@@ -69,15 +69,15 @@ def build(
     theme: Annotated[str, typer.Option("--theme", "-t", help="Theme directory name.")] = "classic",
     fmt: Annotated[
         str,
-        typer.Option("--format", "-f", help="pdf, html, or all."),
+        typer.Option("--format", "-f", help="pdf, html, json, or all."),
     ] = "all",
     out: Annotated[Path, typer.Option("--out", "-o", help="Output directory.")] = DIST_DIR,
 ) -> None:
     """Render resume.json to dist/."""
-    if fmt not in {"pdf", "html", "all"}:
-        typer.echo(f"{err}: --format must be pdf, html or all (got {fmt!r})")
+    if fmt not in {"pdf", "html", "json", "all"}:
+        typer.echo(f"{err}: --format must be pdf, html, json or all (got {fmt!r})")
         raise typer.Exit(2)
-    formats = ("pdf", "html") if fmt == "all" else (fmt,)
+    formats = ("pdf", "html", "json") if fmt == "all" else (fmt,)
 
     resume = _load_or_exit()
 

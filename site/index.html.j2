@@ -130,6 +130,7 @@
     <div class="actions solo">
       <a class="btn primary" href="{{ c.pdf }}" download="{{ b.name }} - CV.pdf">Download PDF</a>
       <a class="btn" href="{{ c.html }}">View in browser</a>
+      <a class="btn" href="{{ c.json }}" title="Machine-readable JSON Resume, same cut as the PDF">JSON</a>
       <span class="size">{{ c.size }}</span>
     </div>
   {% else %}
@@ -141,6 +142,7 @@
         <div class="actions">
           <a class="btn primary" href="{{ c.pdf }}">Download PDF</a>
           <a class="btn" href="{{ c.html }}">View in browser</a>
+          <a class="btn" href="{{ c.json }}" title="Machine-readable JSON Resume, same cut as the PDF">JSON</a>
           <span class="size">{{ c.size }}</span>
         </div>
       </section>

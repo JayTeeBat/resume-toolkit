@@ -6,10 +6,12 @@ they are the only ones that would catch the PDF pipeline breaking.
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from resume_toolkit.build import build_variant
-from resume_toolkit.model import load_resume
+from resume_toolkit.model import load_resume, validate
 from resume_toolkit.pdf import BrowserMissing
 from resume_toolkit.variants import get_variant
 
@@ -61,6 +63,50 @@ def test_short_variant_drops_tagged_entries(resume, tmp_path) -> None:
 
     for entry in kept:
         assert entry["position"] in short_html, f"untagged {entry['position']} missing from short"
+
+
+def _keys_everywhere(node) -> set[str]:
+    if isinstance(node, dict):
+        return set(node) | {k for v in node.values() for k in _keys_everywhere(v)}
+    if isinstance(node, list):
+        return {k for v in node for k in _keys_everywhere(v)}
+    return set()
+
+
+def test_json_build_is_variant_conform(resume, tmp_path) -> None:
+    """The machine-readable artifact must say exactly what the rendered cut
+    says: entries and bullets the variant drops are gone, and none of the
+    variant machinery (x-tags, x-highlights) rides along to reveal them.
+    """
+    short = get_variant("short")
+    written = build_variant(resume, short, formats=("json",), out_dir=tmp_path)
+
+    assert [(a.variant, a.fmt) for a in written] == [("short", "json")]
+    data = json.loads(written[0].path.read_text(encoding="utf-8"))
+
+    keys = _keys_everywhere(data)
+    assert "x-tags" not in keys
+    assert "x-highlights" not in keys
+
+    dropped = [
+        w for w in resume["work"]
+        if w.get("x-tags") and not (set(w["x-tags"]) & short.include)
+    ]
+    assert dropped, "resume.json must have work entries tagged out of short to test this"
+    kept_positions = {w.get("position") for w in data.get("work", [])}
+    for entry in dropped:
+        assert entry["position"] not in kept_positions, f"{entry['position']} leaked into the JSON"
+
+
+def test_json_build_is_a_valid_json_resume_with_provenance(resume, tmp_path) -> None:
+    """Machine-ready means a consumer can trust the schema and date the file."""
+    written = build_variant(resume, get_variant("short"), formats=("json",), out_dir=tmp_path)
+    data = json.loads(written[0].path.read_text(encoding="utf-8"))
+
+    assert validate(data) == []
+    # In a git checkout the stamp always exists; only a tarball build may omit it.
+    meta = data.get("meta") or {}
+    assert "version" in meta and "lastModified" in meta
 
 
 @pytest.mark.slow

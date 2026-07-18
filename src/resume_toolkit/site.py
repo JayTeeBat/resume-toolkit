@@ -61,6 +61,7 @@ def _card(variant: Variant, out_dir: Path) -> dict:
         "description": variant.description,
         "pdf": pdf.name,
         "html": f"resume-{variant.name}.html",
+        "json": f"resume-{variant.name}.json",
         "size": _human_size(pdf.stat().st_size),
     }
 
@@ -87,11 +88,13 @@ def build_site(
     theme: str = "classic",
     out_dir: Path = DIST_DIR,
 ) -> list[Artifact]:
-    """Build every publishable variant as PDF + HTML, then an index linking them.
+    """Build every publishable variant as PDF + HTML + JSON, then an index linking them.
 
-    Only variants marked `publish = true` in variants.toml reach the page, so a
-    CV tailored to one employer never leaks onto a public URL. Card order follows
-    variants.toml, so reordering the file reorders the page.
+    The JSON is the machine-readable cut of the same variant, so a parser and a
+    reader can never disagree about what the CV says. Only variants marked
+    `publish = true` in variants.toml reach the page, so a CV tailored to one
+    employer never leaks onto a public URL. Card order follows variants.toml,
+    so reordering the file reorders the page.
     """
     variants = [v for v in load_variants().values() if v.publish]
     if not variants:
@@ -102,7 +105,9 @@ def build_site(
     written: list[Artifact] = []
     for variant in variants:
         written.extend(
-            build_variant(resume, variant, theme=theme, formats=("pdf", "html"), out_dir=out_dir)
+            build_variant(
+                resume, variant, theme=theme, formats=("pdf", "html", "json"), out_dir=out_dir
+            )
         )
 
     # Cards are built after the PDFs exist, because each one reports its size.

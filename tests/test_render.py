@@ -7,6 +7,7 @@ import pytest
 from resume_toolkit.render import (
     UnknownTheme,
     daterange,
+    group_work,
     location,
     pdate,
     render_html,
@@ -51,6 +52,50 @@ def test_location_skips_blank_parts() -> None:
 def test_urlhost_strips_scheme_and_trailing_slash() -> None:
     assert urlhost("https://www.example.com/") == "example.com"
     assert urlhost(None) == ""
+
+
+def test_group_work_combines_adjacent_roles_and_derives_company_tenure() -> None:
+    work = [
+        {
+            "name": "Analytical Engines",
+            "position": "Lead Engineer",
+            "location": "London",
+            "startDate": "1844-01",
+        },
+        {
+            "name": "Analytical Engines",
+            "position": "Engineer",
+            "location": "London",
+            "startDate": "1842-01",
+            "endDate": "1843-12",
+        },
+        {
+            "name": "Royal Society",
+            "position": "Fellow",
+            "startDate": "1841-01",
+            "endDate": "1841-12",
+        },
+    ]
+
+    grouped = group_work(work)
+
+    assert [group["name"] for group in grouped] == ["Analytical Engines", "Royal Society"]
+    assert [role["position"] for role in grouped[0]["roles"]] == ["Lead Engineer", "Engineer"]
+    assert grouped[0]["startDate"] == "1842-01"
+    assert "endDate" not in grouped[0], "one current role makes the company tenure current"
+    assert grouped[0]["location"] == "London"
+
+
+def test_group_work_does_not_merge_non_adjacent_returns_to_an_employer() -> None:
+    grouped = group_work(
+        [
+            {"name": "A", "position": "Third"},
+            {"name": "B", "position": "Second"},
+            {"name": "A", "position": "First"},
+        ]
+    )
+
+    assert [group["name"] for group in grouped] == ["A", "B", "A"]
 
 
 def test_render_omits_sections_absent_from_the_document() -> None:
@@ -112,6 +157,14 @@ def test_html_head_carries_an_initials_favicon() -> None:
     assert "%3EAK%3C" in html
 
 
+def test_html_is_responsive_on_small_screens() -> None:
+    html = render_html({"basics": {"name": "Ada Lovelace"}})
+
+    assert '<meta name="viewport" content="width=device-width, initial-scale=1">' in html
+    assert "@media screen and (max-width: 640px)" in html
+    assert "width: 100%" in html
+
+
 def test_render_inlines_fonts_and_styles() -> None:
     html = render_html({"basics": {"name": "Ada"}})
 
@@ -154,6 +207,40 @@ def test_markdown_render_is_plain_text_not_escaped_html() -> None:
     assert "&amp;" not in md
     assert "### Engineer — Analytical Engines (Jan 1842 – Present)" in md
     assert "- Programmed the engine." in md
+
+
+def test_render_groups_multiple_roles_under_one_company() -> None:
+    resume = {
+        "basics": {"name": "Ada Lovelace"},
+        "work": [
+            {
+                "name": "Analytical Engines",
+                "position": "Lead Engineer",
+                "location": "London",
+                "startDate": "1844-01",
+                "highlights": ["Led the programme."],
+            },
+            {
+                "name": "Analytical Engines",
+                "position": "Engineer",
+                "location": "London",
+                "startDate": "1842-01",
+                "endDate": "1843-12",
+                "highlights": ["Programmed the engine."],
+            },
+        ],
+    }
+
+    html = render_html(resume)
+    md = render_markdown(resume)
+
+    assert '<h3 class="company-name">' in html
+    assert html.count("Analytical Engines") == 1
+    assert '<h4 class="role-title">Lead Engineer</h4>' in html
+    assert "Jan 1842 – Present" in html
+    assert "### Analytical Engines (Jan 1842 – Present)" in md
+    assert "#### Lead Engineer (Jan 1844 – Present)" in md
+    assert "#### Engineer (Jan 1842 – Dec 1843)" in md
 
 
 def test_markdown_omits_sections_absent_from_the_document() -> None:

@@ -56,6 +56,30 @@ def test_build_site_refuses_when_nothing_is_publishable(monkeypatch, tmp_path) -
         build_site({"basics": {"name": "Test"}}, out_dir=tmp_path)
 
 
+def test_index_prioritises_html_and_opens_pdf_in_a_browser(resume) -> None:
+    card = {
+        "name": "short",
+        "description": "Published CV",
+        "html": "resume-short.html",
+        "pdf": "resume-short.pdf",
+        "json": "resume-short.json",
+        "md": "resume-short.md",
+        "size": "42 KB",
+    }
+
+    index = site_mod._render_index(resume, [card])
+
+    assert '<a class="btn primary" href="resume-short.html">View HTML resume</a>' in index
+    assert (
+        '<a class="btn" href="resume-short.pdf" target="_blank" rel="noopener">View PDF</a>'
+        in index
+    )
+    assert "download=" not in index
+    assert index.index(card["html"]) < index.index(card["pdf"])
+    assert index.index(card["pdf"]) < index.index(card["json"])
+    assert index.index(card["json"]) < index.index(card["md"])
+
+
 @pytest.mark.slow
 def test_site_builds_an_index_and_every_published_variant(built) -> None:
     written, out = built

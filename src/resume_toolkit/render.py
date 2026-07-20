@@ -74,6 +74,38 @@ def urlhost(url: str | None) -> str:
     return re.sub(r"^https?://(www\.)?", "", url).rstrip("/")
 
 
+def group_work(entries: list[dict] | None) -> list[dict]:
+    """Group adjacent roles at the same employer for human-facing output.
+
+    The JSON Resume source keeps one standard ``work`` entry per role.  This
+    view layer adds company tenure and shared location without changing that
+    portable source shape.  Only adjacent entries are grouped: returning to a
+    former employer later in a career remains a separate chronology event.
+    """
+    groups: list[dict] = []
+    for job in entries or []:
+        name = job.get("name")
+        if name and groups and groups[-1]["name"] == name:
+            groups[-1]["roles"].append(job)
+        else:
+            groups.append({"name": name, "url": job.get("url"), "roles": [job]})
+
+    for group in groups:
+        roles = group["roles"]
+        starts = [role["startDate"] for role in roles if role.get("startDate")]
+        ends = [role["endDate"] for role in roles if role.get("endDate")]
+        if starts:
+            group["startDate"] = min(starts)
+        if len(ends) == len(roles) and ends:
+            group["endDate"] = max(ends)
+
+        locations = {role.get("location") for role in roles if role.get("location")}
+        if len(locations) == 1:
+            group["location"] = locations.pop()
+
+    return groups
+
+
 def _environment(theme_path: Path, *, autoescape: bool = True) -> Environment:
     env = Environment(
         loader=FileSystemLoader(theme_path),
@@ -87,6 +119,7 @@ def _environment(theme_path: Path, *, autoescape: bool = True) -> Environment:
     env.filters["daterange"] = daterange
     env.filters["location"] = location
     env.filters["urlhost"] = urlhost
+    env.filters["group_work"] = group_work
     return env
 
 

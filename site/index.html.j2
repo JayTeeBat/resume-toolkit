@@ -145,11 +145,11 @@
   {% if cards | length == 1 %}
     {% set c = cards[0] %}
     <div class="actions solo">
-      <a class="btn primary" href="{{ c.pdf }}" download="{{ b.name }} - CV.pdf">Download PDF</a>
-      <a class="btn" href="{{ c.html }}">View in browser</a>
+      <a class="btn primary" href="{{ c.html }}">View HTML resume</a>
+      <a class="btn" href="{{ c.pdf }}" target="_blank" rel="noopener">View PDF</a>
       <a class="btn" href="{{ c.json }}" title="Machine-readable JSON Resume, same cut as the PDF">JSON</a>
       <a class="btn" href="{{ c.md }}" title="Paste-ready Markdown, same cut as the PDF">Markdown</a>
-      <span class="size">{{ c.size }}</span>
+      <span class="size">PDF · {{ c.size }}</span>
     </div>
   {% else %}
     <div class="cards">
@@ -158,11 +158,11 @@
         <h2>{{ c.name }}</h2>
         {% if c.description %}<p>{{ c.description }}</p>{% endif %}
         <div class="actions">
-          <a class="btn primary" href="{{ c.pdf }}">Download PDF</a>
-          <a class="btn" href="{{ c.html }}">View in browser</a>
+          <a class="btn primary" href="{{ c.html }}">View HTML resume</a>
+          <a class="btn" href="{{ c.pdf }}" target="_blank" rel="noopener">View PDF</a>
           <a class="btn" href="{{ c.json }}" title="Machine-readable JSON Resume, same cut as the PDF">JSON</a>
           <a class="btn" href="{{ c.md }}" title="Paste-ready Markdown, same cut as the PDF">Markdown</a>
-          <span class="size">{{ c.size }}</span>
+          <span class="size">PDF · {{ c.size }}</span>
         </div>
       </section>
       {% endfor %}

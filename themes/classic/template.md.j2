@@ -32,7 +32,34 @@
 {% if resume.work %}
 ## Professional Experience
 
-{% for job in resume.work %}
+{% for company in resume.work | group_work %}
+{% if company.roles | length > 1 %}
+### {{ company.name }}{% if company | daterange %} ({{ company | daterange }}){% endif +%}
+
+{% if company.location %}
+{{ company.location }}
+
+{% endif %}
+{% for job in company.roles %}
+#### {{ job.position }}{% if job | daterange %} ({{ job | daterange }}){% endif +%}
+
+{% if not company.location and job.location %}
+{{ job.location }}
+
+{% endif %}
+{% if job.summary %}
+{{ job.summary }}
+
+{% endif %}
+{% if job.highlights %}
+{% for h in job.highlights %}
+- {{ h }}
+{% endfor %}
+
+{% endif %}
+{% endfor %}
+{% else %}
+{% set job = company.roles[0] %}
 {# Line-final tags end in `+%}`: trim_blocks would otherwise eat the newline
    and weld this line onto the next one. #}
 ### {{ job.position }}{% if job.name %} — {{ job.name }}{% endif %}{% if job | daterange %} ({{ job | daterange }}){% endif +%}
@@ -50,6 +77,7 @@
 - {{ h }}
 {% endfor %}
 
+{% endif %}
 {% endif %}
 {% endfor %}
 {% endif %}

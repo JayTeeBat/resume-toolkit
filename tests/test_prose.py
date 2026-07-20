@@ -3,7 +3,7 @@
 test_validate proves the document is well-formed; these tests gate the
 writing itself. Every rule here is a mechanical check that a review pass
 once fixed by hand: terminal punctuation, UK spelling, typography, tense
-drift between current and past roles, and unquantified entries on the
+drift between current and past roles, unit spacing, and unquantified entries on the
 published cut. Judgment calls (is this bullet vague?) stay with humans;
 nothing in this file should ever need interpretation to stay green.
 
@@ -64,10 +64,62 @@ CASING = {
     "Fastapi": "FastAPI",
 }
 
+# Unit symbols used in engineering prose.  SI style separates a numerical
+# value from its unit symbol with whitespace: "800 V", "17 kWh", "80 %".
+# Longest symbols are matched first so "kWh" cannot be consumed as "kW".
+UNIT_SYMBOLS = (
+    "%",
+    "°C",
+    "A",
+    "Ah",
+    "bar",
+    "cm",
+    "g",
+    "h",
+    "Hz",
+    "kA",
+    "kg",
+    "kHz",
+    "km",
+    "kPa",
+    "kV",
+    "kW",
+    "kWh",
+    "L",
+    "m",
+    "mA",
+    "mAh",
+    "MHz",
+    "min",
+    "mL",
+    "mm",
+    "MPa",
+    "ms",
+    "mV",
+    "MW",
+    "MWh",
+    "N",
+    "Nm",
+    "Pa",
+    "rpm",
+    "s",
+    "V",
+    "W",
+    "Wh",
+)
+UNIT_SYMBOL_PATTERN = "|".join(map(re.escape, sorted(UNIT_SYMBOLS, key=len, reverse=True)))
+UNIT_WITHOUT_SPACE = re.compile(
+    r"(?P<number>(?<![\w.])(?:[<>≤≥±~]?\d+(?:[.,]\d+)?))"
+    rf"(?P<unit>{UNIT_SYMBOL_PATTERN})"
+    r"(?=$|[^\w])"
+)
+
 # Verbs that open a bullet in the imperative/present. Only unambiguous verb
 # forms belong here — "Design" or "Research" read as nouns at the head of a
 # noun phrase and would flag correct sentences.
 PRESENT_VERBS = {
+    "Architect",
+    "Automate",
     "Build",
     "Create",
     "Define",
@@ -256,6 +308,34 @@ def test_typography(resume) -> None:
         if (m := pattern.search(text))
     ]
     fail_with("typography", violations)
+
+
+def test_unit_symbols_are_separated_from_numbers(resume) -> None:
+    violations = [
+        Violation(
+            where,
+            match_context(text, match),
+            f'insert whitespace: write "{match.group("number")} {match.group("unit")}"',
+        )
+        for where, text in iter_strings(resume)
+        for match in UNIT_WITHOUT_SPACE.finditer(text)
+    ]
+    fail_with("unit symbol attached to number", violations)
+
+
+@pytest.mark.parametrize("text", ["800V", "43kWh", "±3%", "25A/channel", "20°C"])
+def test_unit_spacing_gate_recognises_bad_forms(text) -> None:
+    assert UNIT_WITHOUT_SPACE.search(text)
+
+
+@pytest.mark.parametrize("text", ["800 V", "43 kWh", "±3 %", "25 A/channel", "20 °C"])
+def test_unit_spacing_gate_accepts_whitespace(text) -> None:
+    assert not UNIT_WITHOUT_SPACE.search(text)
+
+
+@pytest.mark.parametrize("text", ["ISO 26262", "3D prototype", "OBD2", "100+ resources"])
+def test_unit_spacing_gate_ignores_non_unit_identifiers(text) -> None:
+    assert not UNIT_WITHOUT_SPACE.search(text)
 
 
 def test_tense_matches_the_role(resume) -> None:

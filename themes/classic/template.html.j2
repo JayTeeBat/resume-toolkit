@@ -14,9 +14,10 @@
 <html lang="{{ resume.basics.get('x-lang', 'en') }}">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{ resume.basics.name }} — CV</title>
 {# Initials favicon, derived from the name so it never goes stale — the HTML
-   export is opened in browser tabs too (the index links "View in browser"). #}
+   export is the primary browser view linked from the site index. #}
 {% set initials = (resume.basics.name.split() | map('first') | join(''))[:2] %}
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231f4e79'/%3E%3Ctext x='32' y='44' font-family='system-ui,sans-serif' font-size='30' font-weight='700' text-anchor='middle' fill='%23fff'%3E{{ initials }}%3C/text%3E%3C/svg%3E">
 {{ stylesheet }}
@@ -63,7 +64,34 @@
   {% if resume.work %}
   <section class="section">
     <h2>Professional Experience</h2>
-    {% for job in resume.work %}
+    {% for company in resume.work | group_work %}
+    {% if company.roles | length > 1 %}
+    <div class="company">
+      <div class="entry-head company-head">
+        <h3 class="company-name">
+          {% if company.url %}<a href="{{ company.url }}">{{ company.name }}</a>{% else %}{{ company.name }}{% endif %}
+        </h3>
+        <span class="dates">{{ company | daterange }}</span>
+      </div>
+      {% if company.location %}<p class="entry-meta company-meta">{{ company.location }}</p>{% endif %}
+      {% for job in company.roles %}
+      <div class="entry role">
+        <div class="entry-head">
+          <h4 class="role-title">{{ job.position }}</h4>
+          <span class="dates">{{ job | daterange }}</span>
+        </div>
+        {% if not company.location and job.location %}<p class="entry-meta">{{ job.location }}</p>{% endif %}
+        {% if job.summary %}<p class="entry-summary">{{ job.summary }}</p>{% endif %}
+        {% if job.highlights %}
+        <ul class="highlights">
+          {% for h in job.highlights %}<li>{{ h }}</li>{% endfor %}
+        </ul>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    {% set job = company.roles[0] %}
     <div class="entry">
       <div class="entry-head">
         <h3 class="entry-title">
@@ -80,6 +108,7 @@
       </ul>
       {% endif %}
     </div>
+    {% endif %}
     {% endfor %}
   </section>
   {% endif %}

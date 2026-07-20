@@ -142,6 +142,40 @@ a {
 
 .entry:last-child { margin-bottom: 0; }
 
+.company {
+  margin-bottom: var(--entry-gap);
+}
+
+.company:last-child { margin-bottom: 0; }
+
+.company-head {
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+.company-name {
+  margin: 0;
+  font-size: 10.6pt;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.company-meta { margin-bottom: 2pt; }
+
+.role {
+  margin-top: 3.5pt;
+  margin-left: 5pt;
+  padding-left: 8pt;
+  border-left: 1pt solid var(--rule);
+}
+
+.role-title {
+  margin: 0;
+  font-size: 10.2pt;
+  font-weight: 600;
+  color: var(--ink);
+}
+
 .entry-head {
   display: flex;
   justify-content: space-between;
@@ -280,6 +314,47 @@ a {
     padding: 15mm 14mm;
     background: #fff;
     box-shadow: 0 1px 3px rgba(0, 0, 0, .12), 0 8px 28px rgba(0, 0, 0, .10);
+  }
+}
+
+@media screen and (max-width: 640px) {
+  body {
+    padding: 0;
+    background: #fff;
+  }
+
+  .resume {
+    width: 100%;
+    min-height: 0;
+    padding: 24px 18px;
+    box-shadow: none;
+  }
+
+  .contact {
+    display: grid;
+    gap: 2px;
+  }
+
+  .contact li + li::before { content: none; }
+
+  .skills {
+    grid-template-columns: 1fr;
+    gap: 1pt;
+  }
+
+  .skills dd { margin-bottom: 3pt; }
+
+  .entry-head {
+    display: block;
+  }
+
+  .dates {
+    display: block;
+    margin-top: 1pt;
+  }
+
+  .role {
+    margin-left: 0;
   }
 }
 

@@ -65,7 +65,6 @@
   <section class="section">
     <h2>Professional Experience</h2>
     {% for company in resume.work | group_work %}
-    {% if company.roles | length > 1 %}
     <div class="company">
       <div class="entry-head company-head">
         <h3 class="company-name">
@@ -78,7 +77,7 @@
       <div class="entry role">
         <div class="entry-head">
           <h4 class="role-title">{{ job.position }}</h4>
-          <span class="dates">{{ job | daterange }}</span>
+          {% if company.roles | length > 1 %}<span class="dates">{{ job | daterange }}</span>{% endif %}
         </div>
         {% if not company.location and job.location %}<p class="entry-meta">{{ job.location }}</p>{% endif %}
         {% if job.summary %}<p class="entry-summary">{{ job.summary }}</p>{% endif %}
@@ -90,25 +89,6 @@
       </div>
       {% endfor %}
     </div>
-    {% else %}
-    {% set job = company.roles[0] %}
-    <div class="entry">
-      <div class="entry-head">
-        <h3 class="entry-title">
-          {{ job.position }}{% if job.name %} <span class="at">at</span>
-          {% if job.url %}<a href="{{ job.url }}">{{ job.name }}</a>{% else %}{{ job.name }}{% endif %}{% endif %}
-        </h3>
-        <span class="dates">{{ job | daterange }}</span>
-      </div>
-      {% if job.location %}<p class="entry-meta">{{ job.location }}</p>{% endif %}
-      {% if job.summary %}<p class="entry-summary">{{ job.summary }}</p>{% endif %}
-      {% if job.highlights %}
-      <ul class="highlights">
-        {% for h in job.highlights %}<li>{{ h }}</li>{% endfor %}
-      </ul>
-      {% endif %}
-    </div>
-    {% endif %}
     {% endfor %}
   </section>
   {% endif %}

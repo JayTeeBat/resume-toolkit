@@ -209,7 +209,7 @@ def test_markdown_render_is_plain_text_not_escaped_html() -> None:
     assert "- Programmed the engine." in md
 
 
-def test_render_groups_multiple_roles_under_one_company() -> None:
+def test_render_uses_same_company_heading_for_grouped_and_single_roles() -> None:
     resume = {
         "basics": {"name": "Ada Lovelace"},
         "work": [
@@ -228,19 +228,31 @@ def test_render_groups_multiple_roles_under_one_company() -> None:
                 "endDate": "1843-12",
                 "highlights": ["Programmed the engine."],
             },
+            {
+                "name": "Royal Society",
+                "position": "Fellow",
+                "location": "London",
+                "startDate": "1841-01",
+                "endDate": "1841-12",
+            },
         ],
     }
 
     html = render_html(resume)
     md = render_markdown(resume)
 
-    assert '<h3 class="company-name">' in html
+    assert html.count('class="company-name"') == 2
+    assert html.count('class="role-title"') == 3
     assert html.count("Analytical Engines") == 1
     assert '<h4 class="role-title">Lead Engineer</h4>' in html
+    assert '<h4 class="role-title">Fellow</h4>' in html
+    assert '<span class="at">at</span>' not in html
     assert "Jan 1842 – Present" in html
+    assert html.count("Jan 1841 – Dec 1841") == 1
     assert "### Analytical Engines (Jan 1842 – Present)" in md
     assert "#### Lead Engineer (Jan 1844 – Present)" in md
     assert "#### Engineer (Jan 1842 – Dec 1843)" in md
+    assert "### Fellow — Royal Society (Jan 1841 – Dec 1841)" in md
 
 
 def test_markdown_omits_sections_absent_from_the_document() -> None:

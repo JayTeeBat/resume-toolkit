@@ -2,18 +2,11 @@
 
 ## [Unreleased]
 
-### Added
+## 0.1.0
 
-- Config-driven `resume check` with actionable text/JSON diagnostics, fast and
-  strict modes, and fixture-based rule tests ahead of toolkit extraction.
-
-- Adopt repo-standard-kit v2.0.0 with the python-single profile, pinned
-  compliance checking, local hooks, type checking, and an audited secrets baseline.
-- Document contributor gates, the adoption decision, and MIT code licensing
-  with CV content and derived outputs reserved to the CV owner.
-
-### Changed
-
-- Rename the build workflow to quality, add standard gates, and pin actions
-  while preserving Chromium tests, artifacts, and main-only Pages deployment.
-- Format and lint Python code without changing CV rendering behavior.
+- Extract the reusable toolkit with its development history.
+- Validate JSON Resume and render HTML, PDF, JSON, Markdown and static sites.
+- Select variants with tags and check content with configurable rules.
+- Bundle offline schema, templates and OFL fonts for installation from a git tag.
+- Add fictional examples, CLI integration tests and toolkit documentation.
+- Adopt repo-standard-kit v2.0.0 quality and compliance workflows.

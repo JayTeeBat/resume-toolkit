@@ -1,18 +1,10 @@
 name: Quality
 
-# Triggers match repo-standard-kit's quality workflow (push to main, every
-# pull request). workflow_dispatch is a deliberate addition: it re-runs the
-# gates and redeploys Pages from the Actions tab without a commit.
 on:
   push:
     branches:
       - main
   pull_request:
-  workflow_dispatch:
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -21,85 +13,27 @@ jobs:
   quality:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-        with:
-          # Full history: the colophon dates the CV from the last commit that
-          # touched resume.json. The default shallow clone fetches one commit,
-          # so that lookup would silently fall back to whatever HEAD is and
-          # stamp every build with today's date -- wrong, and wrong quietly.
-          fetch-depth: 0
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
-        with:
-          enable-cache: true
-          cache-dependency-glob: uv.lock
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
 
       - name: Install dependencies
         run: uv sync --locked
 
-      # Chromium is ~150MB; without this every run re-downloads it.
-      - name: Resolve Playwright version
-        id: pw
-        run: echo "version=$(uv run python -c 'from importlib.metadata import version; print(version(\"playwright\"))')" >> "$GITHUB_OUTPUT"
-
-      - name: Cache Playwright browsers
-        id: pw-cache
-        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
-
       - name: Install Chromium
-        # --with-deps installs the system libraries Chromium needs, which the
-        # cache does not cover, so it must run on a cache hit too.
         run: uv run playwright install --with-deps chromium
 
-      # Compliance runs independently; retain the hook for local feedback.
+      # repo-check runs once in CI, in the independently required compliance
+      # status. The hook stays for local feedback before push.
       - name: Run pre-commit
         env:
           SKIP: repo-check
         run: uv run pre-commit run --all-files
 
-      - name: Validate resume.json
-        run: uv run resume validate
-
-      - name: Check CV quality
-        run: uv run resume check
-
-      - name: Test
+      - name: Run pytest
         run: uv run pytest
 
-      - name: Build the site
-        run: uv run resume site
-
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: resume
-          path: dist/
-          if-no-files-found: error
-
-      # Only main gets published; every other branch just proves it builds.
-      - name: Upload Pages artifact
-        if: github.ref == 'refs/heads/main'
-        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
-        with:
-          path: dist/
-
-      # Build distributions after site uploads so packages never enter Pages.
       - name: Build package
         run: uv build
-
-  deploy:
-    needs: quality
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5

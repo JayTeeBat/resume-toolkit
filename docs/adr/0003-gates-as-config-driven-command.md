@@ -20,13 +20,13 @@ message contract and prohibit auto-fixing. See [configuration](../checks.md)
 for rule mappings and defaults.
 
 Replace owner-data tests with fictional fixtures and direct rule tests.
-Run the full command on real content in CI, and its fast mode in pre-commit.
+Content repositories run the command on their content; toolkit CI uses fictional examples.
 Keep schema validation and the existing rendering and publishing interfaces.
 
 ## Consequences
 
 The tool owns rules; the CV repository owns facts and editorial policy.
-This is the first step toward extraction, not a repository split. Codespell
+The subsequent extraction is recorded in ADR 0004. Codespell
 and PDF inspection become runtime dependencies. Codespell retains its original
 repository-wide scope and project skip settings; spelling exceptions move into
 the quality policy. Invalid dates produce diagnostics rather than crashing the
@@ -34,4 +34,4 @@ career-gap check. Missing Chromium fails the command instead of skipping a gate.
 
 Full checks require browser installation. English linguistic heuristics remain
 explicitly limited to their curated lists. Timeline comparisons retain month
-precision. Existing owner warnings are preserved rather than suppressed.
+precision. Content warnings remain visible rather than suppressed.

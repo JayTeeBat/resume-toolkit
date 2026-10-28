@@ -2,12 +2,12 @@
 
 ## Repository Purpose
 
-Validate and render a JSON Resume as HTML, PDF, JSON, Markdown,
+Validate and render JSON Resume content as HTML, PDF, JSON, Markdown,
 and a GitHub Pages site.
 
 ## Repository Context
 
-- Repository name: `my-resume`; Python package: `resume-toolkit`
+- Repository name: `resume-toolkit`; Python package: `resume-toolkit`
 - Primary language(s): `Python`
 - Runtime/build system: `uv` with `uv_build` in `pyproject.toml`
 - Repository type: CV-as-code CLI and static site
@@ -94,9 +94,9 @@ and `repo-adopt` restores them.
 
 ## Single Source Of Truth
 
-`resume.json` is the only home for CV facts. Never invent CV facts; ask the owner
-when dates, claims, or wording need factual confirmation. `variants.toml` selects
-cuts, and templates must not duplicate personal content.
+Fictional examples live in `examples/`; tests must use repository fixtures or
+self-created temporary content, never a contributor's CV or another checkout.
+Content projects own their facts and editorial policy.
 
 Anything stated twice drifts, and the copy that drifts is the one nobody is
 reading when it matters. Before writing, look for what already exists and
@@ -159,9 +159,8 @@ Use trunk-based development with pull requests.
 ## Quality Gates
 
 Install Chromium once with `uv run playwright install chromium`.
-Build all published outputs with `uv run resume site`; preview edits with
-`uv run resume serve` (or `-v short`). Validate data with `uv run resume validate`.
-Run `uv run resume check` for full CV quality gates (`--fast` skips Chromium).
+From `examples/`, use `uv run --project .. resume build` or `resume site`.
+Content paths resolve from the working directory; assets ship inside the package.
 
 Run from repo root:
 
@@ -212,22 +211,19 @@ ruleset applies to every adopting repository.
 - `src/`: production package code
 - `tests/`: automated tests
 - `docs/`: durable project knowledge
-- `resume.json`: all CV facts
-- `variants.toml`: variant selection and publishing configuration
-- `resume-checks.toml`: CV quality policy; defaults in [docs/checks.md](docs/checks.md)
-- `schema/`: pinned JSON Resume schema
-- `themes/classic/`: rendering templates, CSS, and bundled fonts
-- `site/`: landing-page template
-- `dist/`: generated outputs; never commit
+- `examples/`: fictional resume, variants and quality policy
+- `src/resume_toolkit/assets/schema/`: pinned offline JSON Resume schema
+- `src/resume_toolkit/assets/themes/`: templates, CSS and OFL fonts
+- `src/resume_toolkit/assets/site/`: static-site templates
+- `dist/`: generated distributions; never commit
 
 ## Change Control Notes
 
-Preserve schema validation, variant semantics, output formats, and public CLI
-commands. Keep the full-history checkout: the colophon dates content from git.
-Only `main` deploys Pages; all branches upload preview artifacts. Open PRs against
-`main`, or explicitly name and link the parent PR when stacking. Never merge
-without owner authorization. Changes to CV facts require owner confirmation.
-The MIT grant excludes CV content and its derived outputs; see [LICENSE](LICENSE).
+Preserve schema validation, variant semantics, output formats and public CLI
+commands. Release from tags on main; installation is from git, with no PyPI
+release yet. Keep quality and compliance required before merge. Publishing
+sites belongs to content repositories. The toolkit uses MIT; bundled fonts
+retain OFL. Never add real CV content to this repository.
 
 [repo-standard-kit]: https://github.com/JayTeeBat/repo-standard-kit/tree/v2.0.0
 [quality-gates]: https://github.com/JayTeeBat/repo-standard-kit/blob/v2.0.0/docs/quality-gates.md

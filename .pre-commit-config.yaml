@@ -1,12 +1,6 @@
 repos:
   - repo: local
     hooks:
-      - id: resume-gates
-        name: Prose and structure gates
-        entry: uv run resume check --fast
-        language: system
-        files: ^(resume\.json$|variants\.toml$|resume-checks\.toml$|pyproject\.toml$|src/|tests/|themes/|site/)
-        pass_filenames: false
       - id: check-yaml
         name: check yaml
         entry: uv run check-yaml
@@ -74,7 +68,9 @@ repos:
         entry: uv run pymarkdown --config .pymarkdown.json scan
         language: system
         types: [markdown]
-  - repo: https://github.com/JayTeeBat/repo-standard-kit
-    rev: v2.0.0
-    hooks:
       - id: repo-check
+        name: repository compliance
+        entry: uvx --from "git+https://github.com/JayTeeBat/repo-standard-kit.git@v2.0.0" repo-check --strict .
+        language: system
+        pass_filenames: false
+        always_run: true

@@ -139,17 +139,23 @@
     </ul>
   </header>
 
+  {# One macro for both layouts, so the buttons cannot drift apart: each is
+     labelled by its file type alone. #}
+  {% macro actions(c) -%}
+  <a class="btn primary" href="{{ c.html }}">HTML</a>
+      <a class="btn" href="{{ c.pdf }}" target="_blank" rel="noopener">PDF</a>
+      <a class="btn" href="{{ c.json }}">JSON</a>
+      <a class="btn" href="{{ c.md }}">Markdown</a>
+      <span class="size">PDF · {{ c.size }}</span>
+  {%- endmacro %}
+
   {# One published CV is the norm, so present it plainly: no variant name, no
      internal description — just the actions. The multi-card layout below is a
      fallback for the day more than one cut is made public. #}
   {% if cards | length == 1 %}
     {% set c = cards[0] %}
     <div class="actions solo">
-      <a class="btn primary" href="{{ c.html }}">View HTML resume</a>
-      <a class="btn" href="{{ c.pdf }}" target="_blank" rel="noopener">View PDF</a>
-      <a class="btn" href="{{ c.json }}" title="Machine-readable JSON Resume, same cut as the PDF">JSON</a>
-      <a class="btn" href="{{ c.md }}" title="Paste-ready Markdown, same cut as the PDF">Markdown</a>
-      <span class="size">PDF · {{ c.size }}</span>
+      {{ actions(c) }}
     </div>
   {% else %}
     <div class="cards">
@@ -158,11 +164,7 @@
         <h2>{{ c.name }}</h2>
         {% if c.description %}<p>{{ c.description }}</p>{% endif %}
         <div class="actions">
-          <a class="btn primary" href="{{ c.html }}">View HTML resume</a>
-          <a class="btn" href="{{ c.pdf }}" target="_blank" rel="noopener">View PDF</a>
-          <a class="btn" href="{{ c.json }}" title="Machine-readable JSON Resume, same cut as the PDF">JSON</a>
-          <a class="btn" href="{{ c.md }}" title="Paste-ready Markdown, same cut as the PDF">Markdown</a>
-          <span class="size">PDF · {{ c.size }}</span>
+          {{ actions(c) }}
         </div>
       </section>
       {% endfor %}

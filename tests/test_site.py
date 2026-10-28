@@ -69,9 +69,9 @@ def test_index_prioritises_html_and_opens_pdf_in_a_browser(resume) -> None:
 
     index = site_mod._render_index(resume, [card])
 
-    assert '<a class="btn primary" href="resume-short.html">View HTML resume</a>' in index
+    assert '<a class="btn primary" href="resume-short.html">HTML</a>' in index
     assert (
-        '<a class="btn" href="resume-short.pdf" target="_blank" rel="noopener">View PDF</a>'
+        '<a class="btn" href="resume-short.pdf" target="_blank" rel="noopener">PDF</a>'
         in index
     )
     assert "download=" not in index

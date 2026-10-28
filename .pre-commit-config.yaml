@@ -1,0 +1,9 @@
+repos:
+  - repo: local
+    hooks:
+      - id: resume-gates
+        name: Prose and structure gates
+        entry: uv run pytest -q tests/test_prose.py tests/test_structure.py -m 'not slow'
+        language: system
+        files: ^(resume\.json$|variants\.toml$|tests/)
+        pass_filenames: false

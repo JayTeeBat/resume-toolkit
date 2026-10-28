@@ -3,8 +3,8 @@
 test_validate proves the document is well-formed; these tests gate the
 writing itself. Every rule here is a mechanical check that a review pass
 once fixed by hand: terminal punctuation, UK spelling, typography, tense
-drift between current and past roles, unit spacing, and unquantified entries on the
-published cut. Judgment calls (is this bullet vague?) stay with humans;
+drift between current and past roles, verb-led bullets, unit spacing, and
+unquantified entries on the published cut. Judgment calls (is this bullet vague?) stay with humans;
 nothing in this file should ever need interpretation to stay green.
 
 The rules are data-driven: extend the gate by extending the lists below.
@@ -251,6 +251,14 @@ def first_word(text: str) -> str:
     return match.group() if match else ""
 
 
+def looks_present(word: str) -> bool:
+    return word in PRESENT_VERBS
+
+
+def looks_past(word: str) -> bool:
+    return word in IRREGULAR_PAST or word.endswith("ed")
+
+
 def match_context(text: str, match: re.Match[str], margin: int = 20) -> str:
     """The matched text with enough surrounding context to find it."""
     lo = max(0, match.start() - margin)
@@ -355,17 +363,38 @@ def test_tense_matches_the_role(resume) -> None:
         ]
         for where, text in texts:
             word = first_word(text)
-            looks_present = word in PRESENT_VERBS
-            looks_past = word in IRREGULAR_PAST or word.endswith("ed")
-            if current and looks_past and not looks_present:
+            present, past = looks_present(word), looks_past(word)
+            if current and past and not present:
                 violations.append(
                     Violation(where, text, f'"{word}" is past tense — the current role reads in the present')
                 )
-            elif not current and looks_present and not looks_past:
+            elif not current and present and not past:
                 violations.append(
                     Violation(where, text, f'"{word}" is present tense — past roles read in the past')
                 )
     fail_with("tense drift", violations)
+
+
+def test_highlights_open_with_a_verb(resume) -> None:
+    """A bullet states what was done, so it opens on a verb the tense lists
+    recognise: "Characterised the layers", not "Characterisation of the
+    layers". A genuine verb missing from the lists belongs in PRESENT_VERBS
+    or IRREGULAR_PAST, not in an exception here.
+    """
+    violations = []
+    for i, entry in enumerate(resume["work"]):
+        tense = "present (Build, Lead…)" if "endDate" not in entry else "past (Built, Led…)"
+        for j, text in enumerate(entry.get("highlights", [])):
+            word = first_word(text)
+            if not (looks_present(word) or looks_past(word)):
+                violations.append(
+                    Violation(
+                        f"$.work[{i}].highlights[{j}]  ({entry_label(entry)})",
+                        text,
+                        f'"{word}" is not a recognised verb — open with a verb in the {tense}',
+                    )
+                )
+    fail_with("highlight is a noun fragment", violations)
 
 
 def test_published_entries_are_quantified(resume) -> None:

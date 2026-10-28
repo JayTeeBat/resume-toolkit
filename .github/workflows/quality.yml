@@ -60,6 +60,9 @@ jobs:
       - name: Validate resume.json
         run: uv run resume validate
 
+      - name: Check CV quality
+        run: uv run resume check
+
       - name: Test
         run: uv run pytest
 

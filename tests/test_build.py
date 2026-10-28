@@ -9,23 +9,22 @@ from __future__ import annotations
 import json
 
 import pytest
+from conftest import FIXTURES
 
 from resume_toolkit.build import build_variant
-from resume_toolkit.model import load_resume, validate
+from resume_toolkit.model import validate
 from resume_toolkit.pdf import BrowserMissing
 from resume_toolkit.variants import get_variant
 
 A4_MM = (210, 297)
 
 
-@pytest.fixture(scope="module")
-def resume() -> dict:
-    return load_resume()
-
-
 def test_html_build_is_self_contained(resume, tmp_path) -> None:
     written = build_variant(
-        resume, get_variant("full"), formats=("html",), out_dir=tmp_path
+        resume,
+        get_variant("full", FIXTURES / "variants.toml"),
+        formats=("html",),
+        out_dir=tmp_path,
     )
 
     assert len(written) == 1
@@ -42,7 +41,7 @@ def test_short_variant_drops_tagged_entries(resume, tmp_path) -> None:
     the real CV replaced the placeholder. The behaviour under test is the
     filtering, not any particular employer.
     """
-    short = get_variant("short")
+    short = get_variant("short", FIXTURES / "variants.toml")
     dropped = [
         w
         for w in resume["work"]
@@ -54,7 +53,10 @@ def test_short_variant_drops_tagged_entries(resume, tmp_path) -> None:
     assert kept, "resume.json must have untagged work to test this"
 
     full_html = build_variant(
-        resume, get_variant("full"), formats=("html",), out_dir=tmp_path
+        resume,
+        get_variant("full", FIXTURES / "variants.toml"),
+        formats=("html",),
+        out_dir=tmp_path,
     )[0].path.read_text(encoding="utf-8")
     short_html = build_variant(resume, short, formats=("html",), out_dir=tmp_path)[
         0
@@ -85,7 +87,7 @@ def test_json_build_is_variant_conform(resume, tmp_path) -> None:
     says: entries and bullets the variant drops are gone, and none of the
     variant machinery (x-tags, x-highlights) rides along to reveal them.
     """
-    short = get_variant("short")
+    short = get_variant("short", FIXTURES / "variants.toml")
     written = build_variant(resume, short, formats=("json",), out_dir=tmp_path)
 
     assert [(a.variant, a.fmt) for a in written] == [("short", "json")]
@@ -113,7 +115,10 @@ def test_json_build_is_variant_conform(resume, tmp_path) -> None:
 def test_json_build_is_a_valid_json_resume_with_provenance(resume, tmp_path) -> None:
     """Machine-ready means a consumer can trust the schema and date the file."""
     written = build_variant(
-        resume, get_variant("short"), formats=("json",), out_dir=tmp_path
+        resume,
+        get_variant("short", FIXTURES / "variants.toml"),
+        formats=("json",),
+        out_dir=tmp_path,
     )
     data = json.loads(written[0].path.read_text(encoding="utf-8"))
 
@@ -127,7 +132,7 @@ def test_json_build_is_a_valid_json_resume_with_provenance(resume, tmp_path) -> 
 def test_markdown_build_writes_the_variant_cut(resume, tmp_path) -> None:
     """Same conformity bar as the JSON: the paste-ready cut must not carry
     what the variant drops."""
-    short = get_variant("short")
+    short = get_variant("short", FIXTURES / "variants.toml")
     written = build_variant(resume, short, formats=("md",), out_dir=tmp_path)
 
     assert [(a.variant, a.fmt) for a in written] == [("short", "md")]
@@ -153,7 +158,10 @@ def test_pdf_build_produces_an_a4_document_with_extractable_text(
 
     try:
         written = build_variant(
-            resume, get_variant("full"), formats=("pdf",), out_dir=tmp_path
+            resume,
+            get_variant("full", FIXTURES / "variants.toml"),
+            formats=("pdf",),
+            out_dir=tmp_path,
         )
     except BrowserMissing as exc:
         pytest.skip(str(exc))

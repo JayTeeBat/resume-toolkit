@@ -3,9 +3,9 @@ repos:
     hooks:
       - id: resume-gates
         name: Prose and structure gates
-        entry: uv run pytest -q tests/test_prose.py tests/test_structure.py -m 'not slow'
+        entry: uv run resume check --fast
         language: system
-        files: ^(resume\.json$|variants\.toml$|tests/)
+        files: ^(resume\.json$|variants\.toml$|resume-checks\.toml$|pyproject\.toml$|src/|tests/|themes/|site/)
         pass_filenames: false
       - id: check-yaml
         name: check yaml

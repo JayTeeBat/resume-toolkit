@@ -832,20 +832,20 @@ name = "resume-toolkit"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "codespell" },
     { name = "jinja2" },
     { name = "jsonschema", extra = ["format"] },
     { name = "playwright" },
+    { name = "pypdf" },
     { name = "typer" },
 ]
 
 [package.dev-dependencies]
 dev = [
-    { name = "codespell" },
     { name = "detect-secrets" },
     { name = "pre-commit" },
     { name = "pre-commit-hooks" },
     { name = "pymarkdownlnt" },
-    { name = "pypdf" },
     { name = "pytest" },
     { name = "ruff" },
     { name = "ty" },
@@ -853,20 +853,20 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "codespell", specifier = ">=2.4.3" },
     { name = "jinja2", specifier = ">=3.1.4" },
     { name = "jsonschema", extras = ["format"], specifier = ">=4.23.0" },
     { name = "playwright", specifier = ">=1.49.0" },
+    { name = "pypdf", specifier = ">=5.1.0" },
     { name = "typer", specifier = ">=0.15.1" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "codespell", specifier = ">=2.4.3" },
     { name = "detect-secrets", specifier = ">=1.5.0" },
     { name = "pre-commit", specifier = ">=4.0.0" },
     { name = "pre-commit-hooks", specifier = ">=5.0.0" },
     { name = "pymarkdownlnt", specifier = ">=0.9.39" },
-    { name = "pypdf", specifier = ">=5.1.0" },
     { name = "pytest", specifier = ">=8.3.4" },
     { name = "ruff", specifier = ">=0.6.0" },
     { name = "ty", specifier = ">=0.0.1a16" },

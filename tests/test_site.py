@@ -10,29 +10,32 @@ import json
 import re
 
 import pytest
+from conftest import FIXTURES
 from markupsafe import escape
 
 from resume_toolkit import site as site_mod
-from resume_toolkit.model import load_resume
 from resume_toolkit.pdf import BrowserMissing
 from resume_toolkit.site import build_site
 from resume_toolkit.variants import Variant, load_variants
 
 
 def _published() -> list[str]:
-    return [name for name, v in load_variants().items() if v.publish]
+    return [
+        name
+        for name, v in load_variants(FIXTURES / "variants.toml").items()
+        if v.publish
+    ]
 
 
 def _unpublished() -> list[str]:
-    return [name for name, v in load_variants().items() if not v.publish]
+    return [
+        name
+        for name, v in load_variants(FIXTURES / "variants.toml").items()
+        if not v.publish
+    ]
 
 
-@pytest.fixture(scope="module")
-def resume() -> dict:
-    return load_resume()
-
-
-@pytest.fixture(scope="module")
+@pytest.fixture
 def built(resume, tmp_path_factory) -> tuple:
     out = tmp_path_factory.mktemp("site")
     try:

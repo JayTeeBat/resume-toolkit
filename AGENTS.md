@@ -161,6 +161,7 @@ Use trunk-based development with pull requests.
 Install Chromium once with `uv run playwright install chromium`.
 Build all published outputs with `uv run resume site`; preview edits with
 `uv run resume serve` (or `-v short`). Validate data with `uv run resume validate`.
+Run `uv run resume check` for full CV quality gates (`--fast` skips Chromium).
 
 Run from repo root:
 
@@ -190,7 +191,7 @@ ruleset applies to every adopting repository.
 
 ## Testing Policy
 
-- `tests/test_prose.py` and `tests/test_structure.py` enforce CV content gates
+- `resume check` enforces CV gates from `resume-checks.toml`; tests use fictional fixtures
 - Run the full suite, including Chromium page-budget and contact-header tests
 - Logic changes require unit tests
 - Boundary changes require integration tests
@@ -211,6 +212,7 @@ ruleset applies to every adopting repository.
 - `docs/`: durable project knowledge
 - `resume.json`: all CV facts
 - `variants.toml`: variant selection and publishing configuration
+- `resume-checks.toml`: CV quality policy; defaults in [docs/checks.md](docs/checks.md)
 - `schema/`: pinned JSON Resume schema
 - `themes/classic/`: rendering templates, CSS, and bundled fonts
 - `site/`: landing-page template

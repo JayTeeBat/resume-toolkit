@@ -14,6 +14,8 @@ dependencies = [
     "jsonschema[format]>=4.23.0",
     "playwright>=1.49.0",
     "typer>=0.15.1",
+    "pypdf>=5.1.0",
+    "codespell>=2.4.3",
 ]
 
 [project.scripts]
@@ -22,10 +24,6 @@ resume = "resume_toolkit.cli:app"
 [dependency-groups]
 dev = [
     "pytest>=8.3.4",
-    # Test-only: used to assert the built PDF's page geometry and text layer.
-    "pypdf>=5.1.0",
-    # Typo gate (test_prose): catches the class the UK-spelling list cannot.
-    "codespell>=2.4.3",
     "detect-secrets>=1.5.0",
     "pre-commit>=4.0.0",
     "pre-commit-hooks>=5.0.0",
@@ -41,9 +39,6 @@ build-backend = "uv_build"
 [tool.codespell]
 # Vendored/generated content is not ours to spell-check.
 skip = "./.git,./.venv,./dist,./schema,./themes/classic/fonts,./uv.lock"
-# The deliberate 'utiliz' stem in the
-# UK-spelling denylist.
-ignore-words-list = "utiliz"
 
 [tool.repo-standard]
 profile = "python-single"

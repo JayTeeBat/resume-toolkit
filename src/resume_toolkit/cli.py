@@ -154,3 +154,66 @@ def serve(
     except PortInUse as exc:
         typer.echo(f"{err}: {exc}")
         raise typer.Exit(2) from None
+
+
+@app.command()
+def check(
+    path: Annotated[Path, typer.Argument(help="Resume file to check.")] = Path(
+        "resume.json"
+    ),
+    config: Annotated[Path, typer.Option(help="Quality policy TOML.")] = Path(
+        "resume-checks.toml"
+    ),
+    variants: Annotated[Path, typer.Option(help="Variant definitions.")] = Path(
+        "variants.toml"
+    ),
+    fast: Annotated[bool, typer.Option(help="Skip Chromium checks.")] = False,
+    strict: Annotated[bool, typer.Option(help="Fail on soft warnings too.")] = False,
+    fmt: Annotated[str, typer.Option("--format", help="text or json.")] = "text",
+) -> None:
+    """Check CV prose, structure and published layout; never change the input."""
+    import json
+    from dataclasses import asdict
+
+    from .checks import run_checks
+    from .checks.config import ConfigError, load_config
+    from .variants import BadHighlightPattern
+
+    if fmt not in {"text", "json"}:
+        typer.echo(f"{err}: --format must be text or json")
+        raise typer.Exit(2)
+    try:
+        policy = load_config(config)
+        resume = load_resume(path)
+        cuts = load_variants(variants) if variants.exists() else {}
+        violations = run_checks(resume, policy, cuts, fast=fast)
+    except (
+        OSError,
+        ValueError,
+        ValidationFailed,
+        ConfigError,
+        BrowserMissing,
+        BadHighlightPattern,
+    ) as exc:
+        message = (
+            "; ".join(exc.errors) if isinstance(exc, ValidationFailed) else str(exc)
+        )
+        typer.echo(
+            json.dumps({"error": message}) if fmt == "json" else f"{err}: {message}"
+        )
+        raise typer.Exit(2) from None
+    hard = sum(v.severity == "hard" for v in violations)
+    soft = len(violations) - hard
+    if fmt == "json":
+        typer.echo(
+            json.dumps([asdict(v) for v in violations], ensure_ascii=False, indent=2)
+        )
+    else:
+        for rule in dict.fromkeys(v.rule for v in violations):
+            typer.echo(f"{rule}:")
+            for violation in violations:
+                if violation.rule == rule:
+                    level = "warning" if violation.severity == "soft" else "error"
+                    typer.echo(f"  {level}\n{violation.render()}")
+        typer.echo(f"{hard} hard violation(s), {soft} soft warning(s).")
+    raise typer.Exit(1 if hard or (strict and soft) else 0)

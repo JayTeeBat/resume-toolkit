@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from conftest import FIXTURES
 
 from resume_toolkit.variants import (
     BadHighlightPattern,
@@ -166,7 +167,7 @@ def test_highlight_filtering_does_not_mutate_the_input() -> None:
 
 
 def test_repo_variants_toml_loads() -> None:
-    variants = load_variants()
+    variants = load_variants(FIXTURES / "variants.toml")
 
     assert "full" in variants
     assert variants["full"].includes_everything
@@ -189,7 +190,7 @@ def test_publish_is_read_from_the_toml(tmp_path) -> None:
 
 def test_repo_publishes_only_the_short_cut() -> None:
     """The public page must carry the short CV and never the full one."""
-    variants = load_variants()
+    variants = load_variants(FIXTURES / "variants.toml")
 
     assert variants["short"].publish is True
     assert variants["full"].publish is False
@@ -197,4 +198,4 @@ def test_repo_publishes_only_the_short_cut() -> None:
 
 def test_unknown_variant_names_the_known_ones() -> None:
     with pytest.raises(UnknownVariant, match="full"):
-        get_variant("does-not-exist")
+        get_variant("does-not-exist", FIXTURES / "variants.toml")

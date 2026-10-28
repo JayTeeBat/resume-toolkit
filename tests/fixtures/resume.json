@@ -1,0 +1,33 @@
+{
+  "basics": {
+    "name": "Ada Lovelace",
+    "label": "Research & Engineering",
+    "email": "ada@example.com",
+    "summary": "Engineer building reliable analytical engines.",
+    "location": {"city": "London", "countryCode": "GB"}
+  },
+  "work": [
+    {
+      "name": "Analytical Engines",
+      "position": "Lead Engineer",
+      "location": "London, United Kingdom",
+      "startDate": "1844-01",
+      "summary": "Build reliable analytical engines.",
+      "highlights": ["Lead 12 engineers building reliable analytical engines for research and education."]
+    },
+    {
+      "name": "Engine Workshop",
+      "position": "Junior Engineer",
+      "location": "London, United Kingdom",
+      "startDate": "1842-01",
+      "endDate": "1843-12",
+      "summary": "Built 2 prototype engines.",
+      "highlights": ["Developed reliable mechanical components for two experimental engines used in research."],
+      "x-tags": ["full"]
+    }
+  ],
+  "education": [{"institution": "Example College", "studyType": "Diploma", "area": "Mathematics", "startDate": "1839-01", "endDate": "1841-12"}],
+  "skills": [{"name": "Engineering", "keywords": ["Analysis"]}],
+  "publications": [{"name": "Engine Notes", "publisher": "Example Press", "releaseDate": "1843-01", "url": "https://example.com/notes"}],
+  "meta": {"canonical": "https://example.com/cv/"}
+}

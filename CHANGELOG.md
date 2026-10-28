@@ -4,6 +4,9 @@
 
 ### Added
 
+- Config-driven `resume check` with actionable text/JSON diagnostics, fast and
+  strict modes, and fixture-based rule tests ahead of toolkit extraction.
+
 - Adopt repo-standard-kit v2.0.0 with the python-single profile, pinned
   compliance checking, local hooks, type checking, and an audited secrets baseline.
 - Document contributor gates, the adoption decision, and MIT code licensing

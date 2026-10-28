@@ -1,25 +1,23 @@
-"""The real resume.json must satisfy the schema.
-
-This is the test that earns its keep: it turns CI into a guard against a
-typo'd CV.
-"""
+"""Schema validation against fictional fixture documents."""
 
 from __future__ import annotations
 
 import json
 
 import pytest
+from conftest import FIXTURES
 
 from resume_toolkit.model import ValidationFailed, load_resume, validate
-from resume_toolkit.paths import RESUME_JSON
+
+RESUME_JSON = FIXTURES / "resume.json"
 
 
-def test_repo_resume_is_valid() -> None:
+def test_fixture_resume_is_valid() -> None:
     assert validate(json.loads(RESUME_JSON.read_text(encoding="utf-8"))) == []
 
 
 def test_load_resume_returns_the_document() -> None:
-    resume = load_resume()
+    resume = load_resume(RESUME_JSON)
     assert resume["basics"]["name"]
 
 

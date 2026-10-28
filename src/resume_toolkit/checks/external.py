@@ -19,6 +19,15 @@ from .config import CheckConfig, published_variant
 
 
 def codespell(root: Path, config: CheckConfig) -> list[Violation]:
+    # Generated output and environments are never prose inputs. Keep project
+    # codespell settings for all remaining source files.
+    inputs = [
+        f"./{path.name}"
+        for path in sorted(root.iterdir())
+        if path.name not in {"dist", ".git", ".venv"}
+    ]
+    if not inputs:
+        return []
     result = subprocess.run(
         [
             sys.executable,
@@ -26,7 +35,7 @@ def codespell(root: Path, config: CheckConfig) -> list[Violation]:
             "codespell_lib",
             "--ignore-words-list",
             ",".join(config.codespell_ignore_words),
-            ".",
+            *inputs,
         ],
         cwd=root,
         capture_output=True,

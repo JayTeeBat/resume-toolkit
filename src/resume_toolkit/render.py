@@ -34,7 +34,8 @@ class UnknownTheme(Exception):
 
 
 def theme_dir(theme: str) -> Path:
-    path = THEMES_DIR / theme
+    local = Path("themes") / theme
+    path = local.resolve() if local.is_dir() else THEMES_DIR / theme
     if not (path / "template.html.j2").is_file():
         known = (
             sorted(p.name for p in THEMES_DIR.iterdir() if p.is_dir())

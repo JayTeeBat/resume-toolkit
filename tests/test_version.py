@@ -9,8 +9,6 @@ from __future__ import annotations
 
 import subprocess
 
-import pytest
-
 from resume_toolkit import version as ver
 from resume_toolkit.version import Stamp, build_stamp
 
@@ -82,15 +80,27 @@ def test_git_missing_entirely_is_not_fatal(monkeypatch) -> None:
     assert build_stamp() is None
 
 
-@pytest.mark.slow
-def test_stamp_against_the_real_repo() -> None:
-    """The stub above proves the logic; this proves the git invocations are real.
-
-    A typo in a --format string would pass every mocked test and produce garbage
-    on every actual build.
-    """
+def test_stamp_against_a_content_repository(tmp_path, monkeypatch) -> None:
+    """Exercise real git on fictional content, independent of checkout history."""
+    monkeypatch.chdir(tmp_path)
+    source = tmp_path / "resume.json"
+    source.write_text("{}\n")
+    for args in (
+        ["init"],
+        ["add", "resume.json"],
+        [
+            "-c",
+            "user.name=Test",
+            "-c",
+            "user.email=test@example.com",
+            "commit",
+            "-m",
+            "Fixture",
+        ],
+    ):
+        subprocess.run(["git", *args], check=True, capture_output=True)
     stamp = build_stamp()
-
-    assert stamp is not None, "the repo is a git checkout, so a stamp must exist"
-    assert stamp.version.startswith("20"), stamp.version
+    assert stamp is not None
+    assert stamp.version.startswith("20")
     assert "+g" in stamp.version
+    assert not stamp.dirty

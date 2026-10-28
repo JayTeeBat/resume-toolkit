@@ -32,7 +32,7 @@
         },
         "email": {
           "type": "string",
-          "description": "e.g. thomas@gmail.com",
+          "description": "e.g. person@example.com",
           "format": "email"
         },
         "phone": {

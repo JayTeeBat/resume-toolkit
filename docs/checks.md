@@ -39,7 +39,7 @@ advice within the hard bounds. Minimal policy: an empty TOML file.
 | `skills` | `shared_skill_keywords = []`; case-insensitive uniqueness across groups, stale entries fail |
 | `required_fields` | `required_fields = {}`; section names map to lists of nonempty string fields |
 | `dates` | `date_format = "YYYY-MM"`; also accepts policies `YYYY` and `YYYY-MM-DD` |
-| `codespell` | `codespell_ignore_words = []`; checks working directory using existing project skip settings |
+| `codespell` | `codespell_ignore_words = []`; checks working directory using project skip settings; excludes `dist`, `.git`, `.venv` |
 | `page_budget` | `page_budget = 2`; Chromium PDF page count |
 | `header` | Screen and print contact items share a top offset; `screen_width = 1280`, `print_content_width = 688` CSS pixels |
 
@@ -63,6 +63,5 @@ prose, with length limits applying only to work. Spelling, typography and unit
 checks traverse prose strings, excluding URLs, identifiers and variant metadata.
 The spelling rule enforces a curated consistency list, not a full dictionary.
 
-The repository policy retains existing editorial decisions and exceptions.
-Toolkit tests use fictional fixtures and never load the owner's CV. CI runs
-`resume check` separately to apply this policy to the actual content.
+Each content repository owns its editorial policy and exceptions.
+Toolkit tests use fictional fixtures; the example CLI tests exercise default policy.

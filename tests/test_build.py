@@ -112,8 +112,16 @@ def test_json_build_is_variant_conform(resume, tmp_path) -> None:
         )
 
 
-def test_json_build_is_a_valid_json_resume_with_provenance(resume, tmp_path) -> None:
+def test_json_build_is_a_valid_json_resume_with_provenance(
+    resume, tmp_path, monkeypatch
+) -> None:
     """Machine-ready means a consumer can trust the schema and date the file."""
+    from resume_toolkit.version import Stamp
+
+    monkeypatch.setattr(
+        "resume_toolkit.build.build_stamp",
+        lambda: Stamp("2026.01.01+g1234567", "2026-01-01", False),
+    )
     written = build_variant(
         resume,
         get_variant("short", FIXTURES / "variants.toml"),
@@ -123,7 +131,7 @@ def test_json_build_is_a_valid_json_resume_with_provenance(resume, tmp_path) -> 
     data = json.loads(written[0].path.read_text(encoding="utf-8"))
 
     assert validate(data) == []
-    # In a git checkout the stamp always exists; only a tarball build may omit it.
+    # A known content stamp is propagated to machine-readable output.
     meta = data.get("meta") or {}
     assert "version" in meta
     assert "lastModified" in meta

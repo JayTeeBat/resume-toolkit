@@ -1,5 +1,5 @@
 # Build output
-/dist/
+dist/
 
 # LinkedIn data exports. These carry far more personal data than a CV needs
 # (birth date, contacts, messages, ad targeting) and must never be committed.
@@ -13,3 +13,5 @@ __pycache__/
 .venv/
 .pytest_cache/
 *.egg-info/
+
+.ruff_cache/

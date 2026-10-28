@@ -1,6 +1,6 @@
 # Vendored schema provenance
 
-`resume.schema.json` is a verbatim copy of the JSON Resume schema, vendored so that validation is
+`resume.schema.json` is a copy of the JSON Resume schema, vendored so that validation is
 hermetic and works offline.
 
 | | |
@@ -14,10 +14,12 @@ Pinned at that commit deliberately: it is the commit that made the schema draft-
 (`fix(schema): make schema.json draft-07 compliant`). Before it, upstream declared draft-04, which
 `Draft7Validator` would not have been the right validator for.
 
+The email description uses `person@example.com`; validation rules are unchanged.
+
 ## Refreshing
 
 ```sh
-curl -sSL -o schema/resume.schema.json \
+curl -sSL -o src/resume_toolkit/assets/schema/resume.schema.json \
   https://raw.githubusercontent.com/jsonresume/jsonresume.org/<COMMIT>/packages/schema/schema.json
 ```
 

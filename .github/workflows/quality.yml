@@ -1,8 +1,12 @@
 name: Quality
 
+# Triggers match repo-standard-kit's quality workflow (push to main, every
+# pull request). workflow_dispatch is a deliberate addition: it re-runs the
+# gates and redeploys Pages from the Actions tab without a commit.
 on:
   push:
-    branches: ["**"]
+    branches:
+      - main
   pull_request:
   workflow_dispatch:
 

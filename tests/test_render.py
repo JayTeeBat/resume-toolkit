@@ -115,7 +115,7 @@ def test_colophon_identifies_the_cut_and_the_build() -> None:
         stamp=Stamp(version="2026.07.16+g942700c", modified="2026-07-16", dirty=False),
     )
 
-    assert "acme cut" in html
+    assert "Acme Version" in html
     assert "2026.07.16+g942700c" in html
     assert 'href="https://example.com/cv/"' in html
 
@@ -131,19 +131,23 @@ def test_colophon_degrades_when_there_is_nothing_to_stamp() -> None:
     assert "<footer" not in html
 
 
-def test_colophon_claims_resume_as_code_when_meta_names_a_source() -> None:
-    """`meta.source` turns the footer into the resume-as-code claim + repo link."""
-    html = render_html({"basics": {"name": "Ada"}, "meta": {"source": "https://github.com/ada/cv"}})
+def test_header_omits_the_url_the_colophon_already_carries() -> None:
+    """basics.url equal to meta.canonical is shown once, in the colophon; a
+    different url (a portfolio, say) still earns its place in the header."""
+    own = {"basics": {"name": "Ada", "url": "https://example.com/cv/"}, "meta": {"canonical": "https://example.com/cv/"}}
+    other = {"basics": {"name": "Ada", "url": "https://ada.dev/"}, "meta": {"canonical": "https://example.com/cv/"}}
 
-    assert "resume-as-code" in html
-    assert 'href="https://github.com/ada/cv"' in html
+    assert render_html(own).count('href="https://example.com/cv/"') == 1
+    assert 'href="https://ada.dev/"' in render_html(other)
+    assert render_markdown(own).count("example.com/cv") == 1
+    assert "ada.dev" in render_markdown(other)
 
 
 def test_colophon_survives_a_resume_with_no_meta_block() -> None:
     """`meta` is optional in the schema; reaching through it must not raise."""
     html = render_html({"basics": {"name": "Ada"}}, variant="full")
 
-    assert "full cut" in html
+    assert "Full Version" in html
     assert "latest at" not in html
 
 
@@ -269,9 +273,9 @@ def test_markdown_colophon_identifies_the_cut_and_the_build() -> None:
         stamp=Stamp(version="2026.07.16+g942700c", modified="2026-07-16", dirty=False),
     )
 
-    assert "acme cut" in md
+    assert "Acme Version" in md
     assert "2026.07.16+g942700c" in md
-    assert "resume-as-code: https://github.com/ada/cv" in md
+    assert "github.com/ada/cv" not in md
 
 
 def test_markdown_without_provenance_has_no_dangling_rule() -> None:

@@ -11,7 +11,8 @@
 {{ b.label }}
 
 {% endif %}
-{% set contact = ([b.email, b.phone, b.location | location, b.url | urlhost] | select | list)
+{% set own_url = b.url and b.url == (resume.get('meta') or {}).get('canonical') %}
+{% set contact = ([b.email, b.phone, b.location | location, None if own_url else b.url | urlhost] | select | list)
    + ((b.profiles or []) | map(attribute='url') | select | list) %}
 {% if contact %}
 {{ contact | join(' · ') }}
@@ -154,14 +155,12 @@
 
 {% endif %}
 {% set canonical = (resume.get('meta') or {}).get('canonical') %}
-{% set source = (resume.get('meta') or {}).get('source') %}
-{% if variant or stamp or canonical or source %}
+{% if variant or stamp or canonical %}
 ---
 
 {{ [
-     (variant ~ ' cut') if variant else None,
+     ((variant | title) ~ ' Version') if variant else None,
      stamp.version if stamp else None,
      ('latest at ' ~ canonical) if canonical else None,
-     ('resume-as-code: ' ~ source) if source else None,
    ] | select | join(' · ') }}
 {% endif %}

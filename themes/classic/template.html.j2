@@ -33,7 +33,8 @@
     <ul class="contact">
       {% if b.email %}<li><a href="mailto:{{ b.email }}">{{ b.email }}</a></li>{% endif %}
       {% if b.phone %}<li><a href="tel:{{ b.phone | replace(' ', '') }}">{{ b.phone }}</a></li>{% endif %}
-      {% if b.url %}<li><a href="{{ b.url }}">{{ b.url | urlhost }}</a></li>{% endif %}
+      {# The CV's own address already closes the colophon; repeating it here costs a header line. #}
+      {% if b.url and b.url != (resume.get('meta') or {}).get('canonical') %}<li><a href="{{ b.url }}">{{ b.url | urlhost }}</a></li>{% endif %}
       {% if b.location and b.location | location %}<li>{{ b.location | location }}</li>{% endif %}
       {% for p in b.profiles or [] %}
         <li><a href="{{ p.url }}">{{ p.network }}{% if p.username %} / {{ p.username }}{% endif %}</a></li>
@@ -256,13 +257,11 @@
     a missing piece cannot strand a dangling bullet.
   #}
   {% set canonical = (resume.get('meta') or {}).get('canonical') %}
-  {% set source = (resume.get('meta') or {}).get('source') %}
-  {% if variant or stamp or canonical or source %}
+  {% if variant or stamp or canonical %}
   <footer class="colophon">
-    {% if variant %}<span>{{ variant }} cut</span>{% endif %}
+    {% if variant %}<span>{{ variant | title }} Version</span>{% endif %}
     {% if stamp %}<span>{{ stamp.version }}</span>{% endif %}
     {% if canonical %}<span>latest at <a href="{{ canonical }}">{{ canonical | urlhost }}</a></span>{% endif %}
-    {% if source %}<span>resume-as-code: authored as JSON, quality-gated in CI, built with an agentic AI workflow — <a href="{{ source }}">{{ source | urlhost }}</a></span>{% endif %}
   </footer>
   {% endif %}
 

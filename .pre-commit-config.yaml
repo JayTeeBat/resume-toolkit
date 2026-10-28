@@ -7,3 +7,4 @@ repos:
         language: system
         files: ^(resume\.json$|variants\.toml$|tests/)
         pass_filenames: false
+        verbose: true

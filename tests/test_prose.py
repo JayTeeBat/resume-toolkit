@@ -20,6 +20,7 @@ from __future__ import annotations
 import re
 import shutil
 import subprocess
+import warnings
 from collections.abc import Iterator
 
 import pytest
@@ -170,7 +171,19 @@ NON_PROSE_KEYS = {
     "x-tags",
 }
 
+# Words are whitespace-separated tokens; hyphenated terms stay together.
+SUMMARY_SENTENCES = 1
+SUMMARY_SOFT_MAX = 25
+SUMMARY_HARD_MAX = 30
+HIGHLIGHT_SOFT_RANGE = (10, 30)
+# Owner decision: retain short internship bullets, with soft warnings.
+HIGHLIGHT_HARD_RANGE = (3, 40)
+# Sentence ends are punctuation followed by whitespace/end, not decimal points.
+SENTENCE_END = re.compile(r"[.!?]+(?=\s|$)")
+
 PUBLISHED_VARIANT = "short"
+# A4 minus the theme's two 14 mm margins, in CSS pixels (96 dpi).
+PRINT_CONTENT_WIDTH = round((210 - 2 * 14) * 96 / 25.4)
 
 
 # --- violation reporting -----------------------------------------------------
@@ -183,6 +196,10 @@ PUBLISHED_VARIANT = "short"
 #
 # `where` is the JSON path plus, for work entries, the company and position,
 # so the reader lands on the right entry without counting array indices.
+
+
+class ProseSoftLimitWarning(UserWarning):
+    """Editorial length advice; hard limits alone block the build."""
 
 
 class Violation:
@@ -451,3 +468,68 @@ def test_published_variant_stays_within_two_pages(resume, tmp_path) -> None:
         "trim or tag entries out of the cut (x-tags), or tighten the theme's "
         "spacing tokens (--size-base, --leading, --section-gap)"
     )
+
+
+def test_work_prose_length_limits(resume) -> None:
+    violations = []
+    for where, text in iter_sentences(resume):
+        if not where.startswith("$.work["):
+            continue
+        summary = ".summary " in where
+        words = len(text.split())
+        if summary:
+            sentences = len(SENTENCE_END.findall(text))
+            if sentences != SUMMARY_SENTENCES or not text.rstrip().endswith((".", "!", "?")):
+                violations.append(Violation(
+                    where, text,
+                    f"write exactly {SUMMARY_SENTENCES} sentence (found {sentences} sentence endings)",
+                ))
+        hard_min, hard_max = (1, SUMMARY_HARD_MAX) if summary else HIGHLIGHT_HARD_RANGE
+        soft_min, soft_max = (1, SUMMARY_SOFT_MAX) if summary else HIGHLIGHT_SOFT_RANGE
+        if not hard_min <= words <= hard_max:
+            violations.append(Violation(
+                where, text,
+                f"rewrite within {hard_min}–{hard_max} words (hard limit; found {words})",
+            ))
+        elif not soft_min <= words <= soft_max:
+            violation = Violation(
+                where, text,
+                f"aim for {soft_min}–{soft_max} words (found {words}), or justify keeping this wording",
+            )
+            warnings.warn(violation.render(), ProseSoftLimitWarning, stacklevel=2)
+    fail_with("work prose exceeds hard limits", violations)
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("media", ["screen", "print"])
+def test_published_contact_fits_one_line(resume, tmp_path, media) -> None:
+    from playwright.sync_api import sync_playwright
+
+    written = build_variant(
+        resume, get_variant(PUBLISHED_VARIANT), formats=("html",), out_dir=tmp_path
+    )
+    with sync_playwright() as p:
+        try:
+            browser = p.chromium.launch()
+        except Exception:
+            pytest.skip("Chromium not installed; run `playwright install chromium`")
+        try:
+            # Print emulation does not apply @page margins to the viewport.
+            width = PRINT_CONTENT_WIDTH if media == "print" else 1280
+            page = browser.new_page(viewport={"width": width, "height": 1123})
+            page.emulate_media(media=media)
+            page.goto(written[0].path.as_uri(), wait_until="load")
+            page.evaluate("() => document.fonts.ready")
+            items = page.locator(".contact li").evaluate_all(
+                "items => items.map(item => ({text: item.innerText, top: item.getBoundingClientRect().top}))"
+            )
+        finally:
+            browser.close()
+    violations = [
+        Violation(
+            f".contact li ({media}): " + "; ".join(item["text"] for item in items),
+            "top offsets: " + ", ".join(str(item["top"]) for item in items),
+            "shorten or drop one contact item so every item shares the same top offset",
+        )
+    ] if len({item["top"] for item in items}) > 1 else []
+    fail_with("published header contact line wraps", violations)

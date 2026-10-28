@@ -31,6 +31,16 @@ from test_prose import Violation, entry_label, fail_with
 # every entry reads the same way ("London, United Kingdom").
 WORK_LOCATION_PATTERN = re.compile(r"[^,\s][^,]*, [^,\s][^,]*")
 
+# Python is used differently in modelling and backend, kept in both by owner decision.
+SHARED_SKILL_KEYWORDS = {"Python"}
+
+REQUIRED_FIELDS = {
+    "education": ("institution", "studyType", "area", "startDate", "endDate"),
+    "publications": ("name", "publisher", "releaseDate", "url"),
+}
+DATE_FIELDS = {"startDate", "endDate", "releaseDate", "date"}
+DATE_PATTERN = re.compile(r"[0-9]{4}-(?:0[1-9]|1[0-2])")
+
 # Months of unexplained time between two consecutive roles that a reader
 # will let pass without wondering what happened.
 MAX_GAP_MONTHS = 3
@@ -53,29 +63,15 @@ def resume() -> dict:
     return load_resume()
 
 
-def month_index(date: str, *, end: bool = False) -> int:
-    """Months since year 0 for a schema date ("2010", "2010-08", "2010-08-31").
-
-    A bare year spans the whole year: January as a start, December as an end.
-    """
-    parts = date.split("-")
-    month = int(parts[1]) if len(parts) > 1 else (12 if end else 1)
-    return int(parts[0]) * 12 + month - 1
+def month_index(date: str) -> int:
+    """Months since year 0 for a YYYY-MM date."""
+    year, month = map(int, date.split("-"))
+    return year * 12 + month - 1
 
 
 def end_index(entry: dict) -> float:
     """An entry with no endDate is the current role: it runs forever."""
-    return month_index(entry["endDate"], end=True) if "endDate" in entry else float("inf")
-
-
-def on_or_after(date: str, reference: str) -> bool:
-    """Compare two ISO dates at the coarser of their two precisions.
-
-    A bare-year education endDate ("2010") does not say which month the
-    diploma ended, so every role starting that year counts as on/after it.
-    """
-    n = min(len(date), len(reference))
-    return date[:n] >= reference[:n]
+    return month_index(entry["endDate"]) if "endDate" in entry else float("inf")
 
 
 def span(entry: dict) -> str:
@@ -183,18 +179,19 @@ def test_work_entries_do_not_overlap(resume) -> None:
 
 
 def test_career_gaps_are_accounted_for(resume) -> None:
-    """Only roles starting on/after the latest education endDate are judged:
-    internships during school leave gaps that are not career gaps.
+    """Include roles ending after school, including internships that straddle
+    graduation: Employer F must anchor the gap before Employer E.
+    Roles wholly during school do not create career gaps.
     """
     school_end = max(
         (e["endDate"] for e in resume["education"] if "endDate" in e),
-        key=lambda d: month_index(d, end=True),
+        key=month_index,
     )
     career = sorted(
         (
             (i, e)
             for i, e in enumerate(resume["work"])
-            if on_or_after(e["startDate"], school_end)
+            if end_index(e) > month_index(school_end)
         ),
         key=lambda pair: month_index(pair[1]["startDate"]),
         reverse=True,
@@ -204,7 +201,7 @@ def test_career_gaps_are_accounted_for(resume) -> None:
     for (i, newer), (j, older) in pairwise(career):
         if "endDate" not in older:
             continue  # an ongoing older role overlaps; that gate reports it
-        gap = month_index(newer["startDate"]) - month_index(older["endDate"], end=True) - 1
+        gap = month_index(newer["startDate"]) - month_index(older["endDate"]) - 1
         key = (older["endDate"], newer["startDate"])
         if gap <= MAX_GAP_MONTHS:
             continue
@@ -229,3 +226,71 @@ def test_career_gaps_are_accounted_for(resume) -> None:
         if key not in used
     ]
     fail_with("unaccounted career gap", violations)
+
+
+def test_skill_keywords_belong_to_one_group(resume) -> None:
+    occurrences = {}
+    for i, group in enumerate(resume.get("skills", [])):
+        for j, keyword in enumerate(group.get("keywords", [])):
+            occurrences.setdefault(keyword.casefold(), {})[i] = (
+                f"$.skills[{i}].keywords[{j}]  ({group.get('name', '?')})", keyword
+            )
+    shared = {word.casefold() for word in SHARED_SKILL_KEYWORDS}
+    duplicated = {word for word, groups in occurrences.items() if len(groups) > 1}
+    violations = [
+        Violation(
+            where, keyword,
+            "keep this keyword in only one skills group — also appears in "
+            + ", ".join(other for other, _ in groups.values() if other != where),
+        )
+        for word, groups in occurrences.items()
+        if word in duplicated - shared
+        for where, keyword in groups.values()
+    ]
+    violations += [
+        Violation(
+            "SHARED_SKILL_KEYWORDS", word,
+            "no longer shared across groups — remove this allowlist entry",
+        )
+        for word in sorted(SHARED_SKILL_KEYWORDS)
+        if word.casefold() not in duplicated
+    ]
+    fail_with("skill keyword shared across groups", violations)
+
+
+def test_required_fields_are_nonempty(resume) -> None:
+    violations = [
+        Violation(
+            f"$.{section}[{i}].{field}  ({section_label(section, entry)})",
+            str(entry.get(field, "(missing)")),
+            f"supply a non-empty {field} using owner-confirmed facts",
+        )
+        for section, fields in REQUIRED_FIELDS.items()
+        for i, entry in enumerate(resume.get(section, []))
+        for field in fields
+        if not isinstance(entry.get(field), str) or not entry[field].strip()
+    ]
+    fail_with("required field missing or empty", violations)
+
+
+def test_all_dates_use_year_month(resume) -> None:
+    violations = []
+
+    def walk(node, path="$"):
+        if isinstance(node, dict):
+            for key, value in node.items():
+                where = f"{path}.{key}"
+                if key in DATE_FIELDS and (
+                    not isinstance(value, str) or not DATE_PATTERN.fullmatch(value)
+                ):
+                    violations.append(Violation(
+                        where, str(value),
+                        "write YYYY-MM with a valid month (01–12), using owner-confirmed dates",
+                    ))
+                walk(value, where)
+        elif isinstance(node, list):
+            for i, value in enumerate(node):
+                walk(value, f"{path}[{i}]")
+
+    walk(resume)
+    fail_with("date is not YYYY-MM", violations)

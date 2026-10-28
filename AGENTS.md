@@ -199,7 +199,9 @@ ruleset applies to every adopting repository.
 
 ## Documentation Rules
 
-- Update `README.md` when setup or usage changes
+- Keep `README.md` lean and visitor-facing; put toolchain detail in
+  `docs/development.md`, and update whichever one a setup or usage change
+  affects
 - Update `AGENTS.md` when operating rules change
 - Add ADRs for significant architecture decisions
 - Keep the `repo-standard-kit` reference in `README.md` and `AGENTS.md`

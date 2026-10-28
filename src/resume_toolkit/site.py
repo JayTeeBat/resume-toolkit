@@ -94,7 +94,9 @@ def _json_ld(resume: dict) -> Markup:
         "name": b.get("name"),
         "jobTitle": b.get("label"),
         "email": f"mailto:{b['email']}" if b.get("email") else None,
-        "address": {k: v for k, v in address.items() if v} if any(loc.values()) else None,
+        "address": {k: v for k, v in address.items() if v}
+        if any(loc.values())
+        else None,
         "url": (resume.get("meta") or {}).get("canonical"),
         "sameAs": [p["url"] for p in b.get("profiles") or [] if p.get("url")] or None,
     }
@@ -116,12 +118,16 @@ def _site_env() -> Environment:
 
 
 def _render_index(resume: dict, cards: list[dict]) -> str:
-    return _site_env().get_template(INDEX_TEMPLATE).render(
-        resume=resume,
-        cards=cards,
-        source_url=_source_url(),
-        json_ld=_json_ld(resume),
-        generated=date.today().isoformat(),
+    return (
+        _site_env()
+        .get_template(INDEX_TEMPLATE)
+        .render(
+            resume=resume,
+            cards=cards,
+            source_url=_source_url(),
+            json_ld=_json_ld(resume),
+            generated=date.today().isoformat(),
+        )
     )
 
 
@@ -179,14 +185,19 @@ def build_site(
     variants = [v for v in load_variants().values() if v.publish]
     if not variants:
         raise ValueError(
-            "no publishable variants: mark at least one with `publish = true` in variants.toml"
+            "no publishable variants: mark at least one with "
+            "`publish = true` in variants.toml"
         )
 
     written: list[Artifact] = []
     for variant in variants:
         written.extend(
             build_variant(
-                resume, variant, theme=theme, formats=("pdf", "html", "json", "md"), out_dir=out_dir
+                resume,
+                variant,
+                theme=theme,
+                formats=("pdf", "html", "json", "md"),
+                out_dir=out_dir,
             )
         )
 
@@ -213,7 +224,8 @@ def build_site(
     # of a since-renamed variant. Its one job is routing back to the index.
     not_found = out_dir / "404.html"
     not_found.write_text(
-        _site_env().get_template(NOT_FOUND_TEMPLATE).render(resume=resume), encoding="utf-8"
+        _site_env().get_template(NOT_FOUND_TEMPLATE).render(resume=resume),
+        encoding="utf-8",
     )
     written.append(Artifact("404", "html", not_found))
 
@@ -226,7 +238,8 @@ def build_site(
         stamp = build_stamp()
         sitemap = out_dir / "sitemap.xml"
         sitemap.write_text(
-            _sitemap(canonical, cards, stamp.modified if stamp else None), encoding="utf-8"
+            _sitemap(canonical, cards, stamp.modified if stamp else None),
+            encoding="utf-8",
         )
         written.append(Artifact("sitemap", "xml", sitemap))
 

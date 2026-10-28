@@ -55,19 +55,23 @@ def _error_page(message: str) -> str:
 
     return (
         "<!doctype html><meta charset='utf-8'>"
-        "<body style=\"font:14px ui-monospace,monospace;padding:2rem;"
+        '<body style="font:14px ui-monospace,monospace;padding:2rem;'
         'background:#2b2b2b;color:#f88">'
         f"<h2>Build error</h2><pre style='white-space:pre-wrap'>{escape(message)}</pre>"
         f"{_RELOAD_SCRIPT}</body>"
     )
 
 
-def serve_preview(variant: Variant, *, theme: str = "classic", port: int = 8000) -> None:
+def serve_preview(
+    variant: Variant, *, theme: str = "classic", port: int = 8000
+) -> None:
     def current_html() -> str:
         try:
             resume = load_resume()
         except ValidationFailed as exc:
-            return _error_page("resume.json does not satisfy the schema:\n\n" + "\n".join(exc.errors))
+            return _error_page(
+                "resume.json does not satisfy the schema:\n\n" + "\n".join(exc.errors)
+            )
         except (OSError, ValueError) as exc:
             return _error_page(f"could not read resume.json:\n\n{exc}")
         try:
@@ -96,7 +100,7 @@ def serve_preview(variant: Variant, *, theme: str = "classic", port: int = 8000)
             self.end_headers()
             self.wfile.write(body)
 
-        def log_message(self, *args) -> None:
+        def log_message(self, format: str, *args: object) -> None:
             pass  # the poll would otherwise spam a line every 500ms
 
     class Server(ThreadingHTTPServer):
@@ -116,7 +120,9 @@ def serve_preview(variant: Variant, *, theme: str = "classic", port: int = 8000)
             f"  Try a different one:  resume serve --port {port + 1}"
         ) from exc
     print(f"preview: {url}  (variant: {variant.name}, theme: {theme})")
-    print("watching resume.json and themes/ — edit and the page reloads. Ctrl+C to stop.")
+    print(
+        "watching resume.json and themes/ — edit and the page reloads. Ctrl+C to stop."
+    )
     webbrowser.open(url)
     try:
         server.serve_forever()

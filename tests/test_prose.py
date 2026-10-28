@@ -4,7 +4,8 @@ test_validate proves the document is well-formed; these tests gate the
 writing itself. Every rule here is a mechanical check that a review pass
 once fixed by hand: terminal punctuation, UK spelling, typography, tense
 drift between current and past roles, verb-led bullets, unit spacing, and
-unquantified entries on the published cut. Judgment calls (is this bullet vague?) stay with humans;
+unquantified entries on the published cut. Judgment calls (is this bullet vague?)
+stay with humans;
 nothing in this file should ever need interpretation to stay green.
 
 The rules are data-driven: extend the gate by extending the lists below.
@@ -108,7 +109,9 @@ UNIT_SYMBOLS = (
     "W",
     "Wh",
 )
-UNIT_SYMBOL_PATTERN = "|".join(map(re.escape, sorted(UNIT_SYMBOLS, key=len, reverse=True)))
+UNIT_SYMBOL_PATTERN = "|".join(
+    map(re.escape, sorted(UNIT_SYMBOLS, key=len, reverse=True))
+)
 UNIT_WITHOUT_SPACE = re.compile(
     r"(?P<number>(?<![\w.])(?:[<>≤≥±~]?\d+(?:[.,]\d+)?))"
     rf"(?P<unit>{UNIT_SYMBOL_PATTERN})"
@@ -209,7 +212,9 @@ class Violation:
         self.fix = fix
 
     def render(self) -> str:
-        return f"  where:  {self.where}\n  text:   {clip(self.text)}\n  fix:    {self.fix}"
+        return (
+            f"  where:  {self.where}\n  text:   {clip(self.text)}\n  fix:    {self.fix}"
+        )
 
 
 def fail_with(rule: str, violations: list[Violation]) -> None:
@@ -298,9 +303,13 @@ def test_sentences_end_with_a_period(resume) -> None:
 
 
 def test_no_us_spellings(resume) -> None:
-    pattern = re.compile(r"\w*(?:" + "|".join(US_SPELLING_STEMS) + r")\w*", re.IGNORECASE)
+    pattern = re.compile(
+        r"\w*(?:" + "|".join(US_SPELLING_STEMS) + r")\w*", re.IGNORECASE
+    )
     violations = [
-        Violation(where, match_context(text, m), f'replace "{m.group()}" with its UK spelling')
+        Violation(
+            where, match_context(text, m), f'replace "{m.group()}" with its UK spelling'
+        )
         for where, text in iter_strings(resume)
         if (m := pattern.search(text))
     ]
@@ -324,7 +333,10 @@ def test_typography(resume) -> None:
         ("write an em dash (—), not a spaced hyphen", re.compile(r" - ")),
         ("write × for multiplication, not '*'", re.compile(r"\d\s*\*|\*\s*\d")),
         ("write × for multiplication, not the letter 'x'", re.compile(r"\d\s*x\s*\d")),
-        ("put the currency symbol before the amount (€5, not 5€)", re.compile(r"\d\s*[€$£]")),
+        (
+            "put the currency symbol before the amount (€5, not 5€)",
+            re.compile(r"\d\s*[€$£]"),
+        ),
     )
     violations = [
         Violation(where, match_context(text, m), fix)
@@ -358,7 +370,9 @@ def test_unit_spacing_gate_accepts_whitespace(text) -> None:
     assert not UNIT_WITHOUT_SPACE.search(text)
 
 
-@pytest.mark.parametrize("text", ["ISO 26262", "3D prototype", "OBD2", "100+ resources"])
+@pytest.mark.parametrize(
+    "text", ["ISO 26262", "3D prototype", "OBD2", "100+ resources"]
+)
 def test_unit_spacing_gate_ignores_non_unit_identifiers(text) -> None:
     assert not UNIT_WITHOUT_SPACE.search(text)
 
@@ -373,7 +387,11 @@ def test_tense_matches_the_role(resume) -> None:
     for i, entry in enumerate(resume["work"]):
         current = "endDate" not in entry
         label = entry_label(entry)
-        texts = [(f"$.work[{i}].summary  ({label})", entry["summary"])] if "summary" in entry else []
+        texts = (
+            [(f"$.work[{i}].summary  ({label})", entry["summary"])]
+            if "summary" in entry
+            else []
+        )
         texts += [
             (f"$.work[{i}].highlights[{j}]  ({label})", h)
             for j, h in enumerate(entry.get("highlights", []))
@@ -383,11 +401,20 @@ def test_tense_matches_the_role(resume) -> None:
             present, past = looks_present(word), looks_past(word)
             if current and past and not present:
                 violations.append(
-                    Violation(where, text, f'"{word}" is past tense — the current role reads in the present')
+                    Violation(
+                        where,
+                        text,
+                        f'"{word}" is past tense — the current '
+                        f"role reads in the present",
+                    )
                 )
             elif not current and present and not past:
                 violations.append(
-                    Violation(where, text, f'"{word}" is present tense — past roles read in the past')
+                    Violation(
+                        where,
+                        text,
+                        f'"{word}" is present tense — past roles read in the past',
+                    )
                 )
     fail_with("tense drift", violations)
 
@@ -400,7 +427,9 @@ def test_highlights_open_with_a_verb(resume) -> None:
     """
     violations = []
     for i, entry in enumerate(resume["work"]):
-        tense = "present (Build, Lead…)" if "endDate" not in entry else "past (Built, Led…)"
+        tense = (
+            "present (Build, Lead…)" if "endDate" not in entry else "past (Built, Led…)"
+        )
         for j, text in enumerate(entry.get("highlights", [])):
             word = first_word(text)
             if not (looks_present(word) or looks_past(word)):
@@ -408,7 +437,8 @@ def test_highlights_open_with_a_verb(resume) -> None:
                     Violation(
                         f"$.work[{i}].highlights[{j}]  ({entry_label(entry)})",
                         text,
-                        f'"{word}" is not a recognised verb — open with a verb in the {tense}',
+                        f'"{word}" is not a recognised verb — open '
+                        f"with a verb in the {tense}",
                     )
                 )
     fail_with("highlight is a noun fragment", violations)
@@ -421,11 +451,13 @@ def test_published_entries_are_quantified(resume) -> None:
         Violation(
             f"$.work[{i}]  ({entry_label(entry)})",
             entry.get("summary", "(no summary)"),
-            "add at least one concrete figure (scale, spec, cost, accuracy…) or tag the entry out of the published cut",
+            "add at least one concrete figure (scale, spec, cost, "
+            "accuracy…) or tag the entry out of the published cut",
         )
         for i, entry in enumerate(cut["work"])
         if not any(
-            c.isdigit() for c in entry.get("summary", "") + " ".join(entry.get("highlights", []))
+            c.isdigit()
+            for c in entry.get("summary", "") + " ".join(entry.get("highlights", []))
         )
     ]
     fail_with("published entry has no figure at all", violations)
@@ -464,7 +496,8 @@ def test_published_variant_stays_within_two_pages(resume, tmp_path) -> None:
         pytest.skip("Chromium not installed; run `playwright install chromium`")
     pages = len(PdfReader(written[0].path).pages)
     assert pages <= 2, (
-        f"the published '{PUBLISHED_VARIANT}' cut renders to {pages} pages; the budget is 2 — "
+        f"the published '{PUBLISHED_VARIANT}' cut renders to "
+        f"{pages} pages; the budget is 2 — "
         "trim or tag entries out of the cut (x-tags), or tighten the theme's "
         "spacing tokens (--size-base, --leading, --section-gap)"
     )
@@ -479,22 +512,34 @@ def test_work_prose_length_limits(resume) -> None:
         words = len(text.split())
         if summary:
             sentences = len(SENTENCE_END.findall(text))
-            if sentences != SUMMARY_SENTENCES or not text.rstrip().endswith((".", "!", "?")):
-                violations.append(Violation(
-                    where, text,
-                    f"write exactly {SUMMARY_SENTENCES} sentence (found {sentences} sentence endings)",
-                ))
+            if sentences != SUMMARY_SENTENCES or not text.rstrip().endswith(
+                (".", "!", "?")
+            ):
+                violations.append(
+                    Violation(
+                        where,
+                        text,
+                        f"write exactly {SUMMARY_SENTENCES} "
+                        f"sentence (found {sentences} sentence endings)",
+                    )
+                )
         hard_min, hard_max = (1, SUMMARY_HARD_MAX) if summary else HIGHLIGHT_HARD_RANGE
         soft_min, soft_max = (1, SUMMARY_SOFT_MAX) if summary else HIGHLIGHT_SOFT_RANGE
         if not hard_min <= words <= hard_max:
-            violations.append(Violation(
-                where, text,
-                f"rewrite within {hard_min}–{hard_max} words (hard limit; found {words})",
-            ))
+            violations.append(
+                Violation(
+                    where,
+                    text,
+                    f"rewrite within {hard_min}–{hard_max} words "
+                    f"(hard limit; found {words})",
+                )
+            )
         elif not soft_min <= words <= soft_max:
             violation = Violation(
-                where, text,
-                f"aim for {soft_min}–{soft_max} words (found {words}), or justify keeping this wording",
+                where,
+                text,
+                f"aim for {soft_min}–{soft_max} words (found "
+                f"{words}), or justify keeping this wording",
             )
             warnings.warn(violation.render(), ProseSoftLimitWarning, stacklevel=2)
     fail_with("work prose exceeds hard limits", violations)
@@ -521,15 +566,21 @@ def test_published_contact_fits_one_line(resume, tmp_path, media) -> None:
             page.goto(written[0].path.as_uri(), wait_until="load")
             page.evaluate("() => document.fonts.ready")
             items = page.locator(".contact li").evaluate_all(
-                "items => items.map(item => ({text: item.innerText, top: item.getBoundingClientRect().top}))"
+                "items => items.map(item => "
+                "({text: item.innerText, top: item.getBoundingClientRect().top}))"
             )
         finally:
             browser.close()
-    violations = [
-        Violation(
-            f".contact li ({media}): " + "; ".join(item["text"] for item in items),
-            "top offsets: " + ", ".join(str(item["top"]) for item in items),
-            "shorten or drop one contact item so every item shares the same top offset",
-        )
-    ] if len({item["top"] for item in items}) > 1 else []
+    violations = (
+        [
+            Violation(
+                f".contact li ({media}): " + "; ".join(item["text"] for item in items),
+                "top offsets: " + ", ".join(str(item["top"]) for item in items),
+                "shorten or drop one contact item so every item "
+                "shares the same top offset",
+            )
+        ]
+        if len({item["top"] for item in items}) > 1
+        else []
+    )
     fail_with("published header contact line wraps", violations)

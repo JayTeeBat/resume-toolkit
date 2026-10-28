@@ -44,25 +44,32 @@ def test_short_variant_drops_tagged_entries(resume, tmp_path) -> None:
     """
     short = get_variant("short")
     dropped = [
-        w for w in resume["work"]
+        w
+        for w in resume["work"]
         if w.get("x-tags") and not (set(w["x-tags"]) & short.include)
     ]
     kept = [w for w in resume["work"] if not w.get("x-tags")]
-    assert dropped and kept, "resume.json must have both tagged and untagged work to test this"
+    assert dropped, "resume.json must have both tagged and untagged work to test this"
+
+    assert kept, "resume.json must have untagged work to test this"
 
     full_html = build_variant(
         resume, get_variant("full"), formats=("html",), out_dir=tmp_path
     )[0].path.read_text(encoding="utf-8")
-    short_html = build_variant(
-        resume, short, formats=("html",), out_dir=tmp_path
-    )[0].path.read_text(encoding="utf-8")
+    short_html = build_variant(resume, short, formats=("html",), out_dir=tmp_path)[
+        0
+    ].path.read_text(encoding="utf-8")
 
     for entry in dropped:
         assert entry["position"] in full_html
-        assert entry["position"] not in short_html, f"{entry['position']} leaked into short"
+        assert entry["position"] not in short_html, (
+            f"{entry['position']} leaked into short"
+        )
 
     for entry in kept:
-        assert entry["position"] in short_html, f"untagged {entry['position']} missing from short"
+        assert entry["position"] in short_html, (
+            f"untagged {entry['position']} missing from short"
+        )
 
 
 def _keys_everywhere(node) -> set[str]:
@@ -89,24 +96,32 @@ def test_json_build_is_variant_conform(resume, tmp_path) -> None:
     assert "x-highlights" not in keys
 
     dropped = [
-        w for w in resume["work"]
+        w
+        for w in resume["work"]
         if w.get("x-tags") and not (set(w["x-tags"]) & short.include)
     ]
-    assert dropped, "resume.json must have work entries tagged out of short to test this"
+    assert dropped, (
+        "resume.json must have work entries tagged out of short to test this"
+    )
     kept_positions = {w.get("position") for w in data.get("work", [])}
     for entry in dropped:
-        assert entry["position"] not in kept_positions, f"{entry['position']} leaked into the JSON"
+        assert entry["position"] not in kept_positions, (
+            f"{entry['position']} leaked into the JSON"
+        )
 
 
 def test_json_build_is_a_valid_json_resume_with_provenance(resume, tmp_path) -> None:
     """Machine-ready means a consumer can trust the schema and date the file."""
-    written = build_variant(resume, get_variant("short"), formats=("json",), out_dir=tmp_path)
+    written = build_variant(
+        resume, get_variant("short"), formats=("json",), out_dir=tmp_path
+    )
     data = json.loads(written[0].path.read_text(encoding="utf-8"))
 
     assert validate(data) == []
     # In a git checkout the stamp always exists; only a tarball build may omit it.
     meta = data.get("meta") or {}
-    assert "version" in meta and "lastModified" in meta
+    assert "version" in meta
+    assert "lastModified" in meta
 
 
 def test_markdown_build_writes_the_variant_cut(resume, tmp_path) -> None:
@@ -120,15 +135,20 @@ def test_markdown_build_writes_the_variant_cut(resume, tmp_path) -> None:
 
     assert md.startswith(f"# {resume['basics']['name']}")
     dropped = [
-        w for w in resume["work"]
+        w
+        for w in resume["work"]
         if w.get("x-tags") and not (set(w["x-tags"]) & short.include)
     ]
     for entry in dropped:
-        assert entry["position"] not in md, f"{entry['position']} leaked into the Markdown"
+        assert entry["position"] not in md, (
+            f"{entry['position']} leaked into the Markdown"
+        )
 
 
 @pytest.mark.slow
-def test_pdf_build_produces_an_a4_document_with_extractable_text(resume, tmp_path) -> None:
+def test_pdf_build_produces_an_a4_document_with_extractable_text(
+    resume, tmp_path
+) -> None:
     pypdf = pytest.importorskip("pypdf")
 
     try:

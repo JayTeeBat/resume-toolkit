@@ -22,7 +22,11 @@ def _json_path(error) -> str:
     """Render a jsonschema error's location as e.g. `work[2].startDate`."""
     path = ""
     for part in error.absolute_path:
-        path += f"[{part}]" if isinstance(part, int) else (f".{part}" if path else str(part))
+        path += (
+            f"[{part}]"
+            if isinstance(part, int)
+            else (f".{part}" if path else str(part))
+        )
     return path or "<root>"
 
 
@@ -41,7 +45,9 @@ def validate(resume: dict, schema_path: Path = SCHEMA_JSON) -> list[str]:
     validator = Draft7Validator(schema, format_checker=Draft7Validator.FORMAT_CHECKER)
     return [
         f"{_json_path(error)}: {error.message}"
-        for error in sorted(validator.iter_errors(resume), key=lambda e: list(e.absolute_path))
+        for error in sorted(
+            validator.iter_errors(resume), key=lambda e: list(e.absolute_path)
+        )
     ]
 
 

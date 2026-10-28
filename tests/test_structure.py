@@ -14,6 +14,7 @@ import re
 from itertools import combinations, pairwise
 
 import pytest
+from test_prose import Violation, entry_label, fail_with
 
 from resume_toolkit.model import load_resume
 from resume_toolkit.variants import (
@@ -23,7 +24,6 @@ from resume_toolkit.variants import (
     WILDCARD,
     load_variants,
 )
-from test_prose import Violation, entry_label, fail_with
 
 # --- rule data ---------------------------------------------------------------
 
@@ -113,7 +113,9 @@ def test_work_locations_read_city_country(resume) -> None:
             if len(parts) > 2
             else 'write "City, Country"'
         )
-        violations.append(Violation(f"$.work[{i}].location  ({entry_label(entry)})", location, fix))
+        violations.append(
+            Violation(f"$.work[{i}].location  ({entry_label(entry)})", location, fix)
+        )
     fail_with("work location is not City, Country", violations)
 
 
@@ -123,7 +125,9 @@ def test_tags_name_a_real_variant(resume) -> None:
     lists in `include` (the wildcard is a selector, not a tag).
     """
     variants = load_variants()
-    known = (set(variants) | {t for v in variants.values() for t in v.include}) - {WILDCARD}
+    known = (set(variants) | {t for v in variants.values() for t in v.include}) - {
+        WILDCARD
+    }
     known_list = ", ".join(sorted(known))
     violations = []
     for section in TAGGABLE_SECTIONS:
@@ -138,7 +142,8 @@ def test_tags_name_a_real_variant(resume) -> None:
                 Violation(
                     f"{where}  ({label})",
                     tag,
-                    f'remove "{tag}", or define it in variants.toml — known tags: {known_list}',
+                    f'remove "{tag}", or define it in '
+                    f"variants.toml — known tags: {known_list}",
                 )
                 for where, tags in tagged
                 for tag in tags
@@ -153,7 +158,8 @@ def test_work_is_reverse_chronological(resume) -> None:
         Violation(
             f"$.work[{j}]  ({entry_label(later)})",
             span(later),
-            f"move it above $.work[{i}] ({entry_label(earlier)}, {span(earlier)}) — newest role first",
+            f"move it above $.work[{i}] ({entry_label(earlier)}, "
+            f"{span(earlier)}) — newest role first",
         )
         for (i, earlier), (j, later) in pairwise(work)
         if month_index(later["startDate"]) > month_index(earlier["startDate"])
@@ -173,7 +179,8 @@ def test_work_entries_do_not_overlap(resume) -> None:
             "or give the earlier role its endDate",
         )
         for (i, a), (j, b) in combinations(enumerate(resume["work"]), 2)
-        if month_index(a["startDate"]) < end_index(b) and month_index(b["startDate"]) < end_index(a)
+        if month_index(a["startDate"]) < end_index(b)
+        and month_index(b["startDate"]) < end_index(a)
     ]
     fail_with("overlapping roles", violations)
 
@@ -210,7 +217,8 @@ def test_career_gaps_are_accounted_for(resume) -> None:
             continue
         violations.append(
             Violation(
-                f"$.work[{j}] → $.work[{i}]  ({entry_label(older)} → {entry_label(newer)})",
+                f"$.work[{j}] → $.work[{i}]  ({entry_label(older)} "
+                f"→ {entry_label(newer)})",
                 f"{older['endDate']} → {newer['startDate']}",
                 f"{gap}-month gap (limit {MAX_GAP_MONTHS}) — add a role covering it, "
                 f"or add {key!r} to GAP_ALLOWLIST with the reason",
@@ -220,7 +228,8 @@ def test_career_gaps_are_accounted_for(resume) -> None:
         Violation(
             f"GAP_ALLOWLIST[{key!r}]",
             reason,
-            f"no gap over {MAX_GAP_MONTHS} months is bounded by these dates any more — remove the entry",
+            f"no gap over {MAX_GAP_MONTHS} months is bounded by "
+            f"these dates any more — remove the entry",
         )
         for key, reason in GAP_ALLOWLIST.items()
         if key not in used
@@ -233,13 +242,15 @@ def test_skill_keywords_belong_to_one_group(resume) -> None:
     for i, group in enumerate(resume.get("skills", [])):
         for j, keyword in enumerate(group.get("keywords", [])):
             occurrences.setdefault(keyword.casefold(), {})[i] = (
-                f"$.skills[{i}].keywords[{j}]  ({group.get('name', '?')})", keyword
+                f"$.skills[{i}].keywords[{j}]  ({group.get('name', '?')})",
+                keyword,
             )
     shared = {word.casefold() for word in SHARED_SKILL_KEYWORDS}
     duplicated = {word for word, groups in occurrences.items() if len(groups) > 1}
     violations = [
         Violation(
-            where, keyword,
+            where,
+            keyword,
             "keep this keyword in only one skills group — also appears in "
             + ", ".join(other for other, _ in groups.values() if other != where),
         )
@@ -249,7 +260,8 @@ def test_skill_keywords_belong_to_one_group(resume) -> None:
     ]
     violations += [
         Violation(
-            "SHARED_SKILL_KEYWORDS", word,
+            "SHARED_SKILL_KEYWORDS",
+            word,
             "no longer shared across groups — remove this allowlist entry",
         )
         for word in sorted(SHARED_SKILL_KEYWORDS)
@@ -283,10 +295,14 @@ def test_all_dates_use_year_month(resume) -> None:
                 if key in DATE_FIELDS and (
                     not isinstance(value, str) or not DATE_PATTERN.fullmatch(value)
                 ):
-                    violations.append(Violation(
-                        where, str(value),
-                        "write YYYY-MM with a valid month (01–12), using owner-confirmed dates",
-                    ))
+                    violations.append(
+                        Violation(
+                            where,
+                            str(value),
+                            "write YYYY-MM with a valid month "
+                            "(01–12), using owner-confirmed dates",
+                        )
+                    )
                 walk(value, where)
         elif isinstance(node, list):
             for i, value in enumerate(node):

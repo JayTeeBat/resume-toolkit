@@ -56,10 +56,16 @@ def build_variant(
         # provenance the human formats print in the colophon.
         payload = data
         if stamp:
-            meta = {**(data.get("meta") or {}), "version": stamp.version, "lastModified": stamp.modified}
+            meta = {
+                **(data.get("meta") or {}),
+                "version": stamp.version,
+                "lastModified": stamp.modified,
+            }
             payload = {**data, "meta": meta}
         path = out_dir / f"resume-{variant.name}.json"
-        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        path.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
         written.append(Artifact(variant.name, "json", path))
 
     if "md" in formats:

@@ -20,7 +20,7 @@ from resume_toolkit.version import Stamp
 @pytest.mark.parametrize(
     ("value", "expected"),
     [
-        ("2014", "2014"),          # the schema allows a bare year
+        ("2014", "2014"),  # the schema allows a bare year
         ("2014-06", "Jun 2014"),
         ("2014-06-29", "Jun 2014"),
         ("", ""),
@@ -36,7 +36,10 @@ def test_daterange_marks_a_missing_end_as_ongoing() -> None:
 
 
 def test_daterange_with_both_ends() -> None:
-    assert daterange({"startDate": "2019-03", "endDate": "2021-12"}) == "Mar 2019 – Dec 2021"
+    assert (
+        daterange({"startDate": "2019-03", "endDate": "2021-12"})
+        == "Mar 2019 – Dec 2021"
+    )
 
 
 def test_daterange_of_an_undated_entry_is_empty() -> None:
@@ -79,10 +82,18 @@ def test_group_work_combines_adjacent_roles_and_derives_company_tenure() -> None
 
     grouped = group_work(work)
 
-    assert [group["name"] for group in grouped] == ["Analytical Engines", "Royal Society"]
-    assert [role["position"] for role in grouped[0]["roles"]] == ["Lead Engineer", "Engineer"]
+    assert [group["name"] for group in grouped] == [
+        "Analytical Engines",
+        "Royal Society",
+    ]
+    assert [role["position"] for role in grouped[0]["roles"]] == [
+        "Lead Engineer",
+        "Engineer",
+    ]
     assert grouped[0]["startDate"] == "1842-01"
-    assert "endDate" not in grouped[0], "one current role makes the company tenure current"
+    assert "endDate" not in grouped[0], (
+        "one current role makes the company tenure current"
+    )
     assert grouped[0]["location"] == "London"
 
 
@@ -134,8 +145,14 @@ def test_colophon_degrades_when_there_is_nothing_to_stamp() -> None:
 def test_header_omits_the_url_the_colophon_already_carries() -> None:
     """basics.url equal to meta.canonical is shown once, in the colophon; a
     different url (a portfolio, say) still earns its place in the header."""
-    own = {"basics": {"name": "Ada", "url": "https://example.com/cv/"}, "meta": {"canonical": "https://example.com/cv/"}}
-    other = {"basics": {"name": "Ada", "url": "https://ada.dev/"}, "meta": {"canonical": "https://example.com/cv/"}}
+    own = {
+        "basics": {"name": "Ada", "url": "https://example.com/cv/"},
+        "meta": {"canonical": "https://example.com/cv/"},
+    }
+    other = {
+        "basics": {"name": "Ada", "url": "https://ada.dev/"},
+        "meta": {"canonical": "https://example.com/cv/"},
+    }
 
     assert render_html(own).count('href="https://example.com/cv/"') == 1
     assert 'href="https://ada.dev/"' in render_html(other)
@@ -164,7 +181,9 @@ def test_html_head_carries_an_initials_favicon() -> None:
 def test_html_is_responsive_on_small_screens() -> None:
     html = render_html({"basics": {"name": "Ada Lovelace"}})
 
-    assert '<meta name="viewport" content="width=device-width, initial-scale=1">' in html
+    assert (
+        '<meta name="viewport" content="width=device-width, initial-scale=1">' in html
+    )
     assert "@media screen and (max-width: 640px)" in html
     assert "width: 100%" in html
 
@@ -194,7 +213,11 @@ def test_markdown_render_is_plain_text_not_escaped_html() -> None:
     ATS form field would be a visible bug."""
     md = render_markdown(
         {
-            "basics": {"name": "Ada Lovelace", "label": "R&D Lead", "summary": "Did X."},
+            "basics": {
+                "name": "Ada Lovelace",
+                "label": "R&D Lead",
+                "summary": "Did X.",
+            },
             "work": [
                 {
                     "name": "Analytical Engines",

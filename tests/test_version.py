@@ -21,11 +21,15 @@ def _fake_git(monkeypatch, mapping: dict[str, str | None]) -> None:
 
 
 def test_stamp_is_calver_plus_commit(monkeypatch) -> None:
-    _fake_git(monkeypatch, {"log": "2026-07-16", "rev-parse": "942700c", "status": None})
+    _fake_git(
+        monkeypatch, {"log": "2026-07-16", "rev-parse": "942700c", "status": None}
+    )
 
     stamp = build_stamp()
 
-    assert stamp == Stamp(version="2026.07.16+g942700c", modified="2026-07-16", dirty=False)
+    assert stamp == Stamp(
+        version="2026.07.16+g942700c", modified="2026-07-16", dirty=False
+    )
 
 
 def test_uncommitted_edits_are_marked_and_dated_today(monkeypatch) -> None:
@@ -43,6 +47,7 @@ def test_uncommitted_edits_are_marked_and_dated_today(monkeypatch) -> None:
 
     stamp = build_stamp()
 
+    assert stamp is not None
     assert stamp.dirty is True
     assert stamp.modified == date.today().isoformat()
     assert stamp.version.endswith("-dirty")

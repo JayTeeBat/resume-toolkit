@@ -3,7 +3,7 @@
 **Source Sans 3**, latin subset, variable weight (400–700) plus a variable italic.
 Fetched from the Google Fonts CDN (`fonts.gstatic.com`, family version v19).
 
-Licensed under the **SIL Open Font License 1.1** — https://openfontlicense.org/
+Licensed under the **SIL Open Font License 1.1** — <https://openfontlicense.org/>
 
 The OFL permits bundling and redistribution, including embedding in a PDF. Copyright 2010-2023
 Adobe (https://adobe.com/), with Reserved Font Name 'Source'.

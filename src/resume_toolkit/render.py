@@ -14,8 +14,18 @@ from .paths import THEMES_DIR
 from .version import Stamp
 
 MONTHS = (
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
 )
 
 
@@ -26,8 +36,14 @@ class UnknownTheme(Exception):
 def theme_dir(theme: str) -> Path:
     path = THEMES_DIR / theme
     if not (path / "template.html.j2").is_file():
-        known = sorted(p.name for p in THEMES_DIR.iterdir() if p.is_dir()) if THEMES_DIR.is_dir() else []
-        raise UnknownTheme(f"unknown theme {theme!r}; themes/ holds: {', '.join(known) or '(none)'}")
+        known = (
+            sorted(p.name for p in THEMES_DIR.iterdir() if p.is_dir())
+            if THEMES_DIR.is_dir()
+            else []
+        )
+        raise UnknownTheme(
+            f"unknown theme {theme!r}; themes/ holds: {', '.join(known) or '(none)'}"
+        )
     return path
 
 
@@ -135,7 +151,9 @@ def _inline_stylesheet(theme_path: Path) -> Markup:
         rel = match.group("path")
         font = theme_path / rel
         if not font.is_file():
-            raise FileNotFoundError(f"{theme_path.name}/style.css references missing font: {rel}")
+            raise FileNotFoundError(
+                f"{theme_path.name}/style.css references missing font: {rel}"
+            )
         payload = base64.b64encode(font.read_bytes()).decode("ascii")
         return f"url('data:font/woff2;base64,{payload}') format('woff2')"
 

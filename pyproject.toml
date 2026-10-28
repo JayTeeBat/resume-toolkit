@@ -26,17 +26,17 @@ dev = [
     "pypdf>=5.1.0",
     # Typo gate (test_prose): catches the class the UK-spelling list cannot.
     "codespell>=2.4.3",
+    "detect-secrets>=1.5.0",
+    "pre-commit>=4.0.0",
+    "pre-commit-hooks>=5.0.0",
+    "pymarkdownlnt>=0.9.39",
+    "ruff>=0.6.0",
+    "ty>=0.0.1a16",
 ]
 
 [build-system]
 requires = ["uv_build>=0.10.9,<0.11.0"]
 build-backend = "uv_build"
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-markers = [
-    "slow: drives a real Chromium; deselect with -m 'not slow'",
-]
 
 [tool.codespell]
 # Vendored/generated content is not ours to spell-check.
@@ -44,3 +44,22 @@ skip = "./.git,./.venv,./dist,./schema,./themes/classic/fonts,./uv.lock"
 # The deliberate 'utiliz' stem in the
 # UK-spelling denylist.
 ignore-words-list = "utiliz"
+
+[tool.repo-standard]
+profile = "python-single"
+standard = "2"
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "PT"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "slow: drives a real Chromium; deselect with -m 'not slow'",
+]
+
+[tool.ty.src]
+include = ["src", "tests"]

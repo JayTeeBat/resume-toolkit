@@ -5,7 +5,7 @@ hermetic and works offline.
 
 | | |
 |---|---|
-| Upstream | https://github.com/jsonresume/jsonresume.org/tree/master/packages/schema |
+| Upstream | <https://github.com/jsonresume/jsonresume.org/tree/master/packages/schema> |
 | Exact file | `packages/schema/schema.json` |
 | Pinned commit | `d8ebc8c816ae15db10f40e0fefaf4c935e025ea1` (2026-07-16) |
 | Draft | JSON Schema draft-07 |

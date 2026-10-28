@@ -160,7 +160,9 @@ def test_index_head_carries_link_preview_and_person_markup(built, resume) -> Non
     assert 'property="og:title"' in index
     assert 'property="og:description"' in index
 
-    match = re.search(r'<script type="application/ld\+json">(.*?)</script>', index, re.S)
+    match = re.search(
+        r'<script type="application/ld\+json">(.*?)</script>', index, re.S
+    )
     assert match, "index.html has no JSON-LD block"
     person = json.loads(match.group(1))
     assert person["@type"] == "Person"

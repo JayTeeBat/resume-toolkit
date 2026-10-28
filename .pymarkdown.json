@@ -1,0 +1,18 @@
+{
+  "plugins": {
+    "md013": {
+      "enabled": false,
+      "line_length": 88,
+      "code_blocks": false
+    },
+    "md024": {
+      "siblings_only": true
+    },
+    "md036": {
+      "enabled": false
+    },
+    "md033": {
+      "enabled": false
+    }
+  }
+}

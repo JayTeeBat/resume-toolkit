@@ -30,14 +30,14 @@ def _load_or_exit(path: Path = RESUME_JSON) -> dict:
         return load_resume(path)
     except FileNotFoundError:
         typer.echo(f"{err}: no resume at {path}")
-        raise typer.Exit(2)
+        raise typer.Exit(2) from None
     except ValidationFailed as exc:
         typer.echo(f"{err}: {path.name} does not satisfy the JSON Resume schema\n")
         for problem in exc.errors:
             # ASCII deliberately: a Windows cp1252 console mangles "·" to "?".
             typer.echo(f"  - {problem}")
         typer.echo(f"\n{len(exc.errors)} violation(s).")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
 
 @app.command()
@@ -53,8 +53,10 @@ def validate(
 def list_variants() -> None:
     """List the variants defined in variants.toml."""
     for variant in load_variants().values():
-        tags = "everything" if variant.includes_everything else (
-            ", ".join(sorted(variant.include)) or "untagged entries only"
+        tags = (
+            "everything"
+            if variant.includes_everything
+            else (", ".join(sorted(variant.include)) or "untagged entries only")
         )
         name = typer.style(variant.name, bold=True)
         typer.echo(f"{name}\n    {variant.description}\n    includes: {tags}")
@@ -66,17 +68,21 @@ def build(
         str | None,
         typer.Option("--variant", "-v", help="Variant to build. Default: all of them."),
     ] = None,
-    theme: Annotated[str, typer.Option("--theme", "-t", help="Theme directory name.")] = "classic",
+    theme: Annotated[
+        str, typer.Option("--theme", "-t", help="Theme directory name.")
+    ] = "classic",
     fmt: Annotated[
         str,
         typer.Option("--format", "-f", help="pdf, html, json, md, or all."),
     ] = "all",
-    out: Annotated[Path, typer.Option("--out", "-o", help="Output directory.")] = DIST_DIR,
+    out: Annotated[
+        Path, typer.Option("--out", "-o", help="Output directory.")
+    ] = DIST_DIR,
 ) -> None:
     """Render resume.json to dist/."""
     if fmt not in {"pdf", "html", "json", "md", "all"}:
         typer.echo(f"{err}: --format must be pdf, html, json, md or all (got {fmt!r})")
-        raise typer.Exit(2)
+        raise typer.Exit(2) from None
     formats = ("pdf", "html", "json", "md") if fmt == "all" else (fmt,)
 
     resume = _load_or_exit()
@@ -85,11 +91,11 @@ def build(
         targets = [get_variant(variant)] if variant else list(load_variants().values())
     except UnknownVariant as exc:
         typer.echo(f"{err}: {exc}")
-        raise typer.Exit(2)
+        raise typer.Exit(2) from None
 
     if not targets:
         typer.echo(f"{err}: variants.toml defines no variants")
-        raise typer.Exit(2)
+        raise typer.Exit(2) from None
 
     try:
         for target in targets:
@@ -100,13 +106,17 @@ def build(
                 typer.echo(f"{ok}: {artifact.path} ({size / 1024:.0f} KB)")
     except (UnknownTheme, BrowserMissing) as exc:
         typer.echo(f"{err}: {exc}")
-        raise typer.Exit(2)
+        raise typer.Exit(2) from None
 
 
 @app.command()
 def site(
-    theme: Annotated[str, typer.Option("--theme", "-t", help="Theme directory name.")] = "classic",
-    out: Annotated[Path, typer.Option("--out", "-o", help="Output directory.")] = DIST_DIR,
+    theme: Annotated[
+        str, typer.Option("--theme", "-t", help="Theme directory name.")
+    ] = "classic",
+    out: Annotated[
+        Path, typer.Option("--out", "-o", help="Output directory.")
+    ] = DIST_DIR,
 ) -> None:
     # ASCII deliberately, as in _load_or_exit: a Windows cp1252 console mangles
     # "-" typed as an em-dash into "?" when typer prints this help text.
@@ -117,7 +127,7 @@ def site(
         written = build_site(resume, theme=theme, out_dir=out)
     except (UnknownTheme, BrowserMissing) as exc:
         typer.echo(f"{err}: {exc}")
-        raise typer.Exit(2)
+        raise typer.Exit(2) from None
 
     for artifact in written:
         size = artifact.path.stat().st_size
@@ -137,10 +147,10 @@ def serve(
         target = get_variant(variant)
     except UnknownVariant as exc:
         typer.echo(f"{err}: {exc}")
-        raise typer.Exit(2)
+        raise typer.Exit(2) from None
 
     try:
         serve_preview(target, theme=theme, port=port)
     except PortInUse as exc:
         typer.echo(f"{err}: {exc}")
-        raise typer.Exit(2)
+        raise typer.Exit(2) from None

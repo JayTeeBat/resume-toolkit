@@ -1,4 +1,4 @@
-name: build
+name: Quality
 
 on:
   push:
@@ -14,10 +14,10 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  quality:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           # Full history: the colophon dates the CV from the last commit that
           # touched resume.json. The default shallow clone fetches one commit,
@@ -26,7 +26,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
         with:
           enable-cache: true
           cache-dependency-glob: uv.lock
@@ -41,7 +41,7 @@ jobs:
 
       - name: Cache Playwright browsers
         id: pw-cache
-        uses: actions/cache@v5
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
@@ -51,16 +51,22 @@ jobs:
         # cache does not cover, so it must run on a cache hit too.
         run: uv run playwright install --with-deps chromium
 
+      # Compliance runs independently; retain the hook for local feedback.
+      - name: Run pre-commit
+        env:
+          SKIP: repo-check
+        run: uv run pre-commit run --all-files
+
       - name: Validate resume.json
         run: uv run resume validate
 
       - name: Test
-        run: uv run pytest -q
+        run: uv run pytest
 
       - name: Build the site
         run: uv run resume site
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: resume
           path: dist/
@@ -69,12 +75,16 @@ jobs:
       # Only main gets published; every other branch just proves it builds.
       - name: Upload Pages artifact
         if: github.ref == 'refs/heads/main'
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
         with:
           path: dist/
 
+      # Build distributions after site uploads so packages never enter Pages.
+      - name: Build package
+        run: uv build
+
   deploy:
-    needs: build
+    needs: quality
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
@@ -85,4 +95,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5

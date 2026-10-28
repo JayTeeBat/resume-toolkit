@@ -119,7 +119,15 @@ def test_tagged_bullet_survives_the_wildcard_and_sheds_its_rule() -> None:
 def test_highlight_pattern_matching_nothing_fails_loudly() -> None:
     """A rule that silently stopped matching would silently republish the
     bullet everywhere."""
-    data = resume(work=[{"name": "Core", "highlights": ["Shipped X."], "x-highlights": {"Led Y": ["full"]}}])
+    data = resume(
+        work=[
+            {
+                "name": "Core",
+                "highlights": ["Shipped X."],
+                "x-highlights": {"Led Y": ["full"]},
+            }
+        ]
+    )
 
     with pytest.raises(BadHighlightPattern, match="0 bullets"):
         apply_variant(data, UNTAGGED_ONLY)
@@ -174,7 +182,7 @@ def test_publish_defaults_to_false(tmp_path) -> None:
 
 def test_publish_is_read_from_the_toml(tmp_path) -> None:
     toml = tmp_path / "variants.toml"
-    toml.write_text('[public]\ninclude = []\npublish = true\n', encoding="utf-8")
+    toml.write_text("[public]\ninclude = []\npublish = true\n", encoding="utf-8")
 
     assert load_variants(toml)["public"].publish is True
 

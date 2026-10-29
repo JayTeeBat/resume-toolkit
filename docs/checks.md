@@ -6,7 +6,7 @@ from the working directory. Override them with a positional resume path,
 variants file means the whole document is checked. Unknown keys, rule names,
 wrong types and inconsistent limits are configuration errors.
 
-`--fast` skips only `page_budget` and `header`. `--strict` makes soft warnings
+`--fast` skips only the Chromium rules: `page_budget`, `header` and `page_breaks`. `--strict` makes soft warnings
 fail too. `--format json` returns an array with `where`, `text`, `fix`, `rule`
 and `severity` for each violation; input/infrastructure errors return an `error`
 object. Exit codes are 0 for success, 1 for hard violations (or strict warnings),
@@ -40,14 +40,47 @@ advice within the hard bounds. Minimal policy: an empty TOML file.
 | `required_fields` | `required_fields = {}`; section names map to lists of nonempty string fields |
 | `dates` | `date_format = "YYYY-MM"`; also accepts policies `YYYY` and `YYYY-MM-DD` |
 | `codespell` | `codespell_ignore_words = []`; checks working directory using project skip settings; excludes `dist`, `.git`, `.venv` |
-| `page_budget` | `page_budget = 2`; Chromium PDF page count |
+| `page_budget` | `page_budget = 2`; Chromium PDF page count; or a per-variant table, e.g. `page_budget = { "2-page" = 2, "one-page" = 1 }` |
 | `header` | Screen and print contact items share a top offset; `screen_width = 1280`, `print_content_width = 688` CSS pixels |
+| `page_breaks` | No PDF page break inside a role, nor inside a company block that fits one page; `print_content_height = 1009` CSS pixels |
 
-`published_variant = ""` selects the first variant with `publish = true`, or
-all entries if none is published. This selection serves `quantified`,
-`page_budget` and `header`; an explicit name must exist in `variants.toml`.
-The default print width is A4 minus two 14 mm margins at 96 dpi. Custom themes
-with different margins should override it.
+### Which cuts are checked
+
+`quantified`, `page_budget`, `header` and `page_breaks` check cuts, not the
+whole document. `published_variants = []` selects every variant with
+`publish = true`, in `variants.toml` order, or all entries if none is
+published. A list, e.g. `published_variants = ["one-page"]`, selects those
+variants instead. A scalar `page_budget` binds every checked cut; a table binds
+only the cuts it names, so an unnamed cut (a complete CV, say) has no budget.
+
+`variant_exemptions` drops one of those four rules for one cut, e.g.
+`variant_exemptions = { full = ["quantified"] }` when the complete cut keeps
+unquantified internships. Every variant name in `published_variants`, a budget
+table or `variant_exemptions` must exist in `variants.toml`.
+
+Breaking change in 0.2.0: `published_variant = "name"` became
+`published_variants = ["name"]`, and the check now covers every published cut
+by default. The old key fails with that hint.
+
+The default print width is A4 minus two 14 mm margins at 96 dpi, and the
+default print height A4 minus two 15 mm margins. Custom themes with different
+margins should override both.
+
+### How `page_breaks` finds page breaks
+
+Pagination is read back from the printed PDF, not predicted. The rule prints
+each checked cut through the same code path as `resume build`, after pinning
+two invisible 1 px links to every `.company` and `.role` block: one at its top
+edge, one at its bottom edge. They are absolutely positioned, so layout does
+not move, and Chromium writes each into the PDF on the page where that edge
+was laid out. A block whose two edges land on different pages was split.
+
+A split role always fails. A split company fails when its unbroken height,
+measured from the same HTML laid out for print at `print_content_width`, fits
+within `print_content_height`. A company taller than a page may break, but
+only between roles. Themes must mark company and role blocks with the
+`company` and `role` classes; the classic theme keeps both with
+`break-inside: avoid`.
 
 Gap allowlist keys are `"endDate..startDate"` pairs in `YYYY-MM`, with a nonempty
 reason as value. Roles wholly before the latest education end date do not

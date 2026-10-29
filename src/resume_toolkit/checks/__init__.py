@@ -6,7 +6,7 @@ from pathlib import Path
 from ..variants import Variant
 from . import external, prose, structure
 from .common import Violation
-from .config import CheckConfig, published_variant
+from .config import BROWSER_RULES, VARIANT_RULES, CheckConfig, published_variants
 
 Rule = Callable[[dict, CheckConfig, dict[str, Variant]], list[Violation]]
 RULE_FUNCTIONS: dict[str, Rule] = {
@@ -32,6 +32,7 @@ RULE_FUNCTIONS: dict[str, Rule] = {
         structure.dates,
         external.page_budget,
         external.header,
+        external.page_breaks,
     )
 }
 
@@ -45,12 +46,12 @@ def run_checks(
     root: Path = Path("."),
 ) -> list[Violation]:
     """Run in configured order; invalid dates block only timeline comparisons."""
-    if set(config.enabled) & {"quantified", "page_budget", "header"}:
-        published_variant(config, variants)
+    if set(config.enabled) & VARIANT_RULES:
+        published_variants(config, variants)
     violations = []
     invalid_dates = structure.dates(resume, config, variants)
     for name in config.enabled:
-        if fast and name in {"page_budget", "header"}:
+        if fast and name in BROWSER_RULES:
             continue
         if name in {"chronology", "overlaps", "gaps"} and invalid_dates:
             # Keep prerequisites visible even if the date rule was disabled.

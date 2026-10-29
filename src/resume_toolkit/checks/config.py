@@ -31,7 +31,13 @@ RULES = (
     "codespell",
     "page_budget",
     "header",
+    "page_breaks",
 )
+
+#: Rules that print or lay out the CV in Chromium; `--fast` skips them.
+BROWSER_RULES = frozenset({"page_budget", "header", "page_breaks"})
+#: Rules that check each published cut rather than the whole document.
+VARIANT_RULES = BROWSER_RULES | {"quantified"}
 
 
 class ConfigError(ValueError):
@@ -43,9 +49,12 @@ class CheckConfig:
     enabled: list[str] = field(default_factory=lambda: list(RULES))
     spelling: str = "none"
     proper_names: dict[str, str] = field(default_factory=dict)
-    published_variant: str = ""
-    page_budget: int = 2
+    published_variants: list[str] = field(default_factory=list)
+    #: One budget for every checked cut, or a table of per-variant budgets.
+    page_budget: int | dict[str, int] = 2
+    variant_exemptions: dict[str, list[str]] = field(default_factory=dict)
     print_content_width: int = round((210 - 2 * 14) * 96 / 25.4)
+    print_content_height: int = round((297 - 2 * 15) * 96 / 25.4)
     screen_width: int = 1280
     max_gap_months: int = 3
     gap_allowlist: dict[tuple[str, str], str] = field(default_factory=dict)
@@ -80,10 +89,22 @@ def load_config(path: Path = Path("resume-checks.toml")) -> CheckConfig:
         raise ConfigError(f"{path}: {exc}") from exc
     defaults = CheckConfig()
     known = {f.name for f in fields(defaults)}
+    if "published_variant" in raw:
+        raise ConfigError(
+            "published_variant: replaced in 0.2.0 by published_variants, "
+            'a list of names (e.g. published_variants = ["one-page"])'
+        )
     if unknown := raw.keys() - known:
         raise ConfigError(f"unknown checks key(s): {', '.join(sorted(unknown))}")
     for key, value in raw.items():
         default = getattr(defaults, key)
+        if key == "page_budget" and isinstance(value, dict):
+            if not value or any(type(v) is not int or v <= 0 for v in value.values()):
+                raise ConfigError(
+                    "page_budget: expected a positive integer, or a table of "
+                    'variant = positive integer (e.g. { "2-page" = 2 })'
+                )
+            continue
         if type(value) is not type(default):
             raise ConfigError(f"{key}: expected {type(default).__name__}")
         if isinstance(default, int) and (
@@ -109,6 +130,14 @@ def load_config(path: Path = Path("resume-checks.toml")) -> CheckConfig:
             for v in value.values()
         ):
             raise ConfigError("required_fields: expected section = [field names]")
+        if key == "variant_exemptions" and any(
+            not isinstance(v, list) or any(r not in VARIANT_RULES for r in v)
+            for v in value.values()
+        ):
+            raise ConfigError(
+                "variant_exemptions: expected variant = [rule names] among "
+                + ", ".join(sorted(VARIANT_RULES))
+            )
     gaps = {}
     for bounds, reason in raw.get("gap_allowlist", {}).items():
         parts = bounds.split("..")
@@ -149,15 +178,49 @@ def load_config(path: Path = Path("resume-checks.toml")) -> CheckConfig:
     return config
 
 
-def published_variant(config: CheckConfig, variants: dict[str, Variant]) -> Variant:
-    if config.published_variant:
-        if config.published_variant not in variants:
+def published_variants(
+    config: CheckConfig, variants: dict[str, Variant]
+) -> list[Variant]:
+    """The cuts that variant rules check, in variants.toml order.
+
+    An explicit `published_variants` list wins; otherwise every `publish = true`
+    variant, or the whole document when nothing is published. Names in
+    `published_variants`, `variant_exemptions` and a page-budget table must
+    exist in variants.toml, so a renamed variant cannot silently drop a check.
+    """
+    for key, names in (
+        ("published_variants", config.published_variants),
+        ("variant_exemptions", config.variant_exemptions),
+        (
+            "page_budget",
+            config.page_budget if isinstance(config.page_budget, dict) else {},
+        ),
+    ):
+        if missing := [name for name in names if name not in variants]:
             raise ConfigError(
-                f"published_variant: {config.published_variant!r} is not in "
-                f"variants.toml"
+                f"{key}: {', '.join(map(repr, missing))} not in variants.toml; "
+                f"it defines: {', '.join(variants) or '(none)'}"
             )
-        return variants[config.published_variant]
-    return next(
-        (v for v in variants.values() if v.publish),
-        Variant("all", "", frozenset({"*"})),
-    )
+    if config.published_variants:
+        return [variants[name] for name in config.published_variants]
+    return [v for v in variants.values() if v.publish] or [
+        Variant("all", "", frozenset({"*"}))
+    ]
+
+
+def checked_variants(
+    rule: str, config: CheckConfig, variants: dict[str, Variant]
+) -> list[Variant]:
+    """The published cuts `rule` applies to, minus configured exemptions."""
+    return [
+        v
+        for v in published_variants(config, variants)
+        if rule not in config.variant_exemptions.get(v.name, [])
+    ]
+
+
+def page_budget_for(config: CheckConfig, variant: str) -> int | None:
+    """A scalar budget binds every cut; a table binds only the cuts it names."""
+    if isinstance(config.page_budget, dict):
+        return config.page_budget.get(variant)
+    return config.page_budget

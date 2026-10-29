@@ -188,3 +188,43 @@ def test_pdf_build_produces_an_a4_document_with_extractable_text(
     text = page.extract_text()
     assert resume["basics"]["name"] in text
     assert "�" not in text, "text layer lost characters"
+
+
+@pytest.mark.slow
+def test_pdf_repeats_one_footer_with_page_numbers_on_every_page(
+    resume, tmp_path, monkeypatch
+) -> None:
+    """Each page names the cut, the build and where the latest copy lives, and
+    numbers itself; the text layer reads body first, footer last, once."""
+    pypdf = pytest.importorskip("pypdf")
+    from resume_toolkit.version import Stamp
+
+    monkeypatch.setattr(
+        "resume_toolkit.build.build_stamp",
+        lambda: Stamp("2026.01.01+g1234567", "2026-01-01", False),
+    )
+    resume["work"][0]["highlights"] *= 60
+    try:
+        written = build_variant(
+            resume,
+            get_variant("short", FIXTURES / "variants.toml"),
+            formats=("pdf",),
+            out_dir=tmp_path,
+        )
+    except BrowserMissing as exc:
+        pytest.skip(str(exc))
+
+    pages = pypdf.PdfReader(str(written[0].path)).pages
+    assert len(pages) >= 2
+    footer = "Short Version · 2026.01.01+g1234567 · latest at example.com/cv"
+    for number, page in enumerate(pages, start=1):
+        lines = page.extract_text().splitlines()
+        assert lines[-1] == f"{footer} {number} / {len(pages)}"
+        assert sum(footer in line for line in lines) == 1
+        # The canonical address stays clickable on every page.
+        uris = [a.get_object()["/A"].get("/URI") for a in page.get("/Annots") or []]
+        assert "https://example.com/cv/" in uris
+    text = "".join(page.extract_text() for page in pages)
+    # Body text is laid out once: the footer adds no second copy of anything.
+    assert text.count(resume["basics"]["name"]) == 1
+    assert text.count("Example College") == 1

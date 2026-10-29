@@ -1,0 +1,12 @@
+{#
+  The running footer Chromium draws in the bottom @page margin of every PDF
+  page (pdf.print_page). It is a separate document, so it carries its own copy
+  of the stylesheet; pageNumber and totalPages are filled in by Chromium.
+  Screen HTML never sees it: there the colophon closes the document once.
+#}
+{% from "colophon.html.j2" import colophon_items %}
+{{ stylesheet }}
+<footer class="running-footer">
+  <span class="colophon-items">{{ colophon_items(variant, stamp, canonical) }}</span>
+  <span class="folio"><span class="pageNumber"></span> / <span class="totalPages"></span></span>
+</footer>

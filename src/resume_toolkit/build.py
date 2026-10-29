@@ -8,7 +8,7 @@ from pathlib import Path
 
 from .paths import DIST_DIR
 from .pdf import html_to_pdf
-from .render import render_html, render_markdown
+from .render import render_html, render_markdown, render_print_footer
 from .variants import Variant, apply_variant
 from .version import build_stamp
 
@@ -45,7 +45,10 @@ def build_variant(
 
     if "pdf" in formats:
         path = out_dir / f"resume-{variant.name}.pdf"
-        html_to_pdf(html, path)
+        footer = render_print_footer(
+            data, theme=theme, variant=variant.name, stamp=stamp
+        )
+        html_to_pdf(html, path, footer)
         written.append(Artifact(variant.name, "pdf", path))
 
     if "json" in formats:

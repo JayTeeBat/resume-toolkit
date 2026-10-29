@@ -13,7 +13,7 @@
 {% endif %}
 {% set own_url = b.url and b.url == (resume.get('meta') or {}).get('canonical') %}
 {% set contact = ([b.email, b.phone, b.location | location, None if own_url else b.url | urlhost] | select | list)
-   + ((b.profiles or []) | map(attribute='url') | select | list) %}
+   + ((b.profiles or []) | map(attribute='url') | select | map('urlhost') | list) %}
 {% if contact %}
 {{ contact | join(' · ') }}
 
@@ -23,7 +23,7 @@
 
 {% endif %}
 {% if resume.skills %}
-## Core Engineering Capabilities
+## Skills
 
 {% for s in resume.skills %}
 - **{{ s.name }}**{% if s.level %} ({{ s.level }}){% endif %}: {{ (s.keywords or []) | join(', ') }}

@@ -1,0 +1,11 @@
+{#
+  The colophon's pieces, shared by the screen colophon (template.html.j2) and
+  the running print footer (footer.html.j2), so the two cannot disagree.
+  Separators are drawn in CSS, so a missing piece cannot strand a dangling
+  bullet.
+#}
+{% macro colophon_items(variant, stamp, canonical) %}
+{% if variant %}<span>{{ variant | title }} Version</span>{% endif %}
+{% if stamp %}<span>{{ stamp.version }}</span>{% endif %}
+{% if canonical %}<span>latest at <a href="{{ canonical }}">{{ canonical | urlhost }}</a></span>{% endif %}
+{% endmacro %}

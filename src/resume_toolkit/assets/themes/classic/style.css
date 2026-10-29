@@ -94,7 +94,9 @@ a {
   padding: 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 2pt 10pt;
+  /* 7pt either side of a separator, not 10pt: full profile URLs
+     (linkedin.com/in/…) must still share one line at A4 print width. */
+  gap: 2pt 7pt;
   font-size: 8.6pt;
   color: var(--ink-soft);
 }
@@ -102,7 +104,7 @@ a {
 /* Bullet separators between contact items, but not before the first. */
 .contact li + li::before {
   content: '·';
-  margin-right: 10pt;
+  margin-right: 7pt;
   color: var(--ink-faint);
 }
 
@@ -144,6 +146,11 @@ a {
 
 .company {
   margin-bottom: var(--entry-gap);
+  /* A company never straddles a page break. One taller than a page breaks
+     anyway, and then only between roles, which .entry keeps whole. The
+     page_breaks check verifies both on the printed PDF. */
+  break-inside: avoid;
+  page-break-inside: avoid;
 }
 
 .company:last-child { margin-bottom: 0; }
@@ -273,9 +280,10 @@ a {
 
 /* --- Colophon ------------------------------------------------------------
    Provenance, deliberately quiet: it identifies the file without competing
-   with the CV. It closes the document rather than repeating per page, because
-   a running footer would need Chromium's own header/footer templates, and
-   those require reserved page margins that would fight the @page rule above. */
+   with the CV. On screen it closes the document once. In print it is hidden
+   and .running-footer (footer.html.j2) repeats the same items, plus a page
+   number, on every page: Chromium draws that footer inside the @page bottom
+   margin, so it never overlaps content or changes the pagination. */
 .colophon {
   margin-top: var(--section-gap);
   padding-top: 4pt;
@@ -288,15 +296,33 @@ a {
 
 /* Separators in CSS, not markup: any piece can be absent without leaving a
    dangling bullet behind it. */
-.colophon > * + *::before {
+.colophon > * + *::before,
+.colophon-items > * + *::before {
   content: ' · ';
   color: var(--rule);
 }
 
-.colophon a {
+.colophon a,
+.running-footer a {
   color: inherit;
   border-bottom: none;
 }
+
+/* Chromium lays the footer template out in the bottom page margin at full
+   page width; the side padding repeats the @page side margins. */
+.running-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10pt;
+  width: 100%;
+  padding: 0 14mm;
+  font-family: var(--font);
+  font-size: 7.2pt;
+  color: var(--ink-faint);
+}
+
+.folio { font-variant-numeric: tabular-nums; }
 
 /* --- Screen-only affordances --------------------------------------------
    Give the browser preview a paper-on-desk look. Chromium applies @page in
@@ -360,4 +386,5 @@ a {
 
 @media print {
   a { border-bottom: none; }
+  .resume > .colophon { display: none; }
 }

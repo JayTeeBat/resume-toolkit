@@ -193,6 +193,33 @@ def render_html(
     )
 
 
+def render_print_footer(
+    resume: dict,
+    theme: str = "classic",
+    *,
+    variant: str | None = None,
+    stamp: Stamp | None = None,
+) -> str | None:
+    """Render the theme's running PDF footer, or None if it has none.
+
+    The result is a Chromium footer template: a standalone document drawn in
+    the bottom page margin, so it gets its own copy of the stylesheet.
+    """
+    path = theme_dir(theme)
+    if not (path / "footer.html.j2").is_file():
+        return None
+    return (
+        _environment(path)
+        .get_template("footer.html.j2")
+        .render(
+            stylesheet=_inline_stylesheet(path),
+            variant=variant,
+            stamp=stamp,
+            canonical=(resume.get("meta") or {}).get("canonical"),
+        )
+    )
+
+
 def render_markdown(
     resume: dict,
     theme: str = "classic",

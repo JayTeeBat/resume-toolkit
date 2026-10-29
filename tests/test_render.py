@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import shutil
+
 import pytest
 
+from resume_toolkit.paths import THEMES_DIR
 from resume_toolkit.render import (
     UnknownTheme,
     daterange,
@@ -12,6 +15,7 @@ from resume_toolkit.render import (
     pdate,
     render_html,
     render_markdown,
+    render_print_footer,
     urlhost,
 )
 from resume_toolkit.version import Stamp
@@ -305,3 +309,66 @@ def test_markdown_without_provenance_has_no_dangling_rule() -> None:
     md = render_markdown({"basics": {"name": "Ada"}})
 
     assert "---" not in md
+
+
+PROFILED = {
+    "basics": {
+        "name": "Ada",
+        "profiles": [
+            {
+                "network": "LinkedIn",
+                "username": "ada",
+                "url": "https://www.linkedin.com/in/ada-lovelace/",
+            },
+            {"network": "GitHub", "url": "https://github.com/ada"},
+        ],
+    },
+    "skills": [{"name": "Engines", "keywords": ["Analysis"]}],
+}
+
+
+def test_profiles_print_their_full_address() -> None:
+    """A printed CV cannot be clicked: show the address, not "Network / user"."""
+    html = render_html(PROFILED)
+    md = render_markdown(PROFILED)
+
+    assert (
+        '<a href="https://www.linkedin.com/in/ada-lovelace/">'
+        "linkedin.com/in/ada-lovelace</a>" in html
+    )
+    assert '<a href="https://github.com/ada">github.com/ada</a>' in html
+    assert "LinkedIn / ada" not in html
+    assert "linkedin.com/in/ada-lovelace · github.com/ada" in md
+    assert "https://" not in md
+
+
+def test_skills_section_is_headed_skills() -> None:
+    assert "<h2>Skills</h2>" in render_html(PROFILED)
+    assert "\n## Skills\n" in render_markdown(PROFILED)
+
+
+def test_print_footer_repeats_the_colophon_with_page_placeholders() -> None:
+    footer = render_print_footer(
+        {"meta": {"canonical": "https://example.com/cv/"}},
+        variant="2-page",
+        stamp=Stamp(version="2026.07.16+g942700c", modified="2026-07-16", dirty=False),
+    )
+
+    assert footer is not None
+    assert "2-Page Version" in footer
+    assert "2026.07.16+g942700c" in footer
+    assert '<a href="https://example.com/cv/">example.com/cv</a>' in footer
+    # Chromium fills these two spans in on each page.
+    assert '<span class="pageNumber"></span> / <span class="totalPages"></span>' in (
+        footer
+    )
+    # A separate document: it must bring its own fonts.
+    assert "url('data:font/woff2;base64," in footer
+
+
+def test_print_footer_is_optional_for_a_theme(tmp_path, monkeypatch) -> None:
+    shutil.copytree(THEMES_DIR / "classic", tmp_path / "themes" / "plain")
+    (tmp_path / "themes" / "plain" / "footer.html.j2").unlink()
+    monkeypatch.chdir(tmp_path)
+
+    assert render_print_footer({}, theme="plain") is None

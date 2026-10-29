@@ -6,7 +6,9 @@ Initialize a uv project and install the toolkit from the tag as shown in the
 [README](../README.md#install). Copy the three files in [examples](../examples)
 into your project root: `resume.json`, `variants.toml` and `resume-checks.toml`.
 Replace the fictional JSON Resume with your own facts. Set `meta.canonical` to
-your Pages URL and mark public variants with `publish = true`.
+your Pages URL and mark public variants with `publish = true`. The first
+published variant is the primary cut on the site; see
+[development](development.md#what-gets-published).
 
 The checks file can be empty to use defaults. Add only overrides you need;
 [checks](checks.md) documents every rule. Keep private variants unpublished.

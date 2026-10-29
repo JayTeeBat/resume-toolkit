@@ -96,10 +96,29 @@ stripped and build provenance stamped into `meta`. A parser and a reader can nev
 what the CV says. The same goes for the Markdown, which exists for the places styled output cannot
 go: ATS web forms, plain-text email, LLM prompts.
 
+The first published variant in `variants.toml` is the primary cut: the index
+shows it first and most prominently, and the canonical `resume.json` alias and
+`llms.txt` point at it. Further published variants follow it on the index as
+alternatives, in file order, with the same HTML, PDF, JSON and Markdown actions.
+Reorder `variants.toml` to change the primary cut.
+
 Besides variant artifacts, the site includes `index.html`, a canonical `resume.json`
 alias, `llms.txt`, `404.html`, `robots.txt` and a sitemap when `meta.canonical` is set.
 The source link and build provenance come from the content repository, not the
 installed toolkit. A directory without git history has no provenance stamp.
+
+## PDF pages
+
+The classic theme keeps every company on one page; a company taller than a
+page breaks between roles, never inside one. The `page_breaks` check verifies
+this on the PDF. Every PDF page carries the same footer: the variant label,
+the build stamp, the canonical address (a link) and a page number. Chromium
+draws it from the theme's `footer.html.j2` inside the `@page` bottom margin, so
+it cannot overlap content or change pagination. The footer is a Chromium
+footer template, not a CSS margin box: margin boxes would put the footer first
+in the PDF text layer, glued to the page number, and could not hold a link.
+The screen HTML has no page numbers and closes with a single colophon, which
+print hides. A theme without `footer.html.j2` prints no footer.
 
 ## Asset packaging
 

@@ -83,6 +83,53 @@ def test_index_prioritises_html_and_opens_pdf_in_a_browser(resume) -> None:
     assert index.index(card["json"]) < index.index(card["md"])
 
 
+def _cards(*names: str) -> list[dict]:
+    return [
+        {
+            "name": name,
+            "description": f"The {name} cut",
+            "html": f"resume-{name}.html",
+            "pdf": f"resume-{name}.pdf",
+            "json": f"resume-{name}.json",
+            "md": f"resume-{name}.md",
+            "size": "42 KB",
+        }
+        for name in names
+    ]
+
+
+def test_index_leads_with_the_primary_cut_and_offers_the_rest(resume) -> None:
+    """First published variant = primary card; the others follow, in file
+    order, as alternatives with the same four actions."""
+    index = site_mod._render_index(resume, _cards("one-page", "2-page", "full"))
+
+    primary = index.index('class="card primary-card"')
+    alternatives = index.index('class="alternatives"')
+    assert primary < index.index("One-Page Version") < alternatives
+    assert index.count('class="card primary-card"') == 1
+    assert index.count('class="card alternative"') == 2
+    assert alternatives < index.index("2-Page Version") < index.index("Full Version")
+    for name in ("one-page", "2-page", "full"):
+        actions = re.findall(rf'href="resume-{name}\.\w+"[^>]*>(\w+)</a>', index)
+        assert actions == ["HTML", "PDF", "JSON", "Markdown"]
+
+
+def test_index_with_one_cut_shows_actions_only(resume) -> None:
+    index = site_mod._render_index(resume, _cards("short"))
+
+    assert 'class="actions solo"' in index
+    assert 'class="card' not in index
+    assert "Short Version" not in index
+
+
+def test_llms_txt_names_the_primary_cut_and_lists_every_cut(resume) -> None:
+    llms = site_mod._render_llms(resume, _cards("one-page", "2-page", "full"))
+
+    assert "primary published cut (one-page)" in llms
+    for name in ("one-page", "2-page", "full"):
+        assert f"resume-{name}.pdf" in llms
+
+
 @pytest.mark.slow
 def test_site_builds_an_index_and_every_published_variant(built) -> None:
     written, out = built

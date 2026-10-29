@@ -175,7 +175,8 @@ def build_site(
     so no consumer can ever disagree with the PDF about what the CV says. Only
     variants marked `publish = true` in variants.toml reach the page, so a CV
     tailored to one employer never leaks onto a public URL. Card order follows
-    variants.toml, so reordering the file reorders the page.
+    variants.toml, so reordering the file reorders the page; the first
+    published variant is the primary cut, shown first and most prominently.
 
     Beyond the variants, the site gets its front matter: index.html (the human
     front door), /resume.json (the guessable machine address — an alias of the

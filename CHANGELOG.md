@@ -10,13 +10,6 @@
   content coverage after variant filtering, including required source roles.
 - Standards register with a pin-drift test.
 
-### Changed
-
-- `unit_spacing` cites the SI Brochure, 9th edition (2019), §5.4.3 and §5.4.7,
-  and groups its symbols as SI, accepted for use with the SI, and common
-  non-SI battery units. `Nm` is no longer a recognised symbol: SI writes
-  `N m` or `N·m`.
-
 - Per-variant `style` tables override declared theme design tokens in HTML,
   PDF, preview and layout checks, with configuration validation and documented
   readability floors. Classic spacing and small-text tokens preserve defaults.
@@ -39,6 +32,10 @@
 
 ### Changed
 
+- `unit_spacing` cites the SI Brochure, 9th edition (2019), §5.4.3 and §5.4.7,
+  and groups its symbols as SI, accepted for use with the SI, and common
+  non-SI battery units. `Nm` is no longer a recognised symbol: SI writes
+  `N m` or `N·m`.
 - Breaking: `published_variant` is replaced by `published_variants`; variant
   rules (`quantified`, `page_budget`, `header`, `page_breaks`) check every
   published cut by default.

@@ -45,7 +45,7 @@
   --highlights-gap: 2.5pt;
   --bullet-gap: 1.2pt;
   --skills-gap: 2.5pt;
-  --size-footer: 7.2pt;
+  --size-footer: 7.5pt;
 }
 
 /* --- Page geometry -------------------------------------------------------
@@ -322,18 +322,24 @@ a {
 /* Chromium lays the footer template out in the bottom page margin at full
    page width; the side padding repeats the @page side margins. */
 .running-footer {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: baseline;
-  gap: 10pt;
   width: 100%;
   padding: 0 14mm;
   font-family: var(--font);
   font-size: var(--size-footer);
+  line-height: 1.35;
+  white-space: nowrap;
   color: var(--ink-faint);
 }
 
-.folio { font-variant-numeric: tabular-nums; }
+.running-footer .colophon-items { justify-self: start; }
+.footer-latest { justify-self: center; }
+.folio {
+  justify-self: end;
+  font-variant-numeric: tabular-nums;
+}
 
 /* --- Screen-only affordances --------------------------------------------
    Give the browser preview a paper-on-desk look. Chromium applies @page in

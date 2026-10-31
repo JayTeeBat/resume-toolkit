@@ -126,3 +126,59 @@ def test_html_pdf_and_checks_use_variant_style(resume, tmp_path, monkeypatch) ->
         resume, replace(config, page_budget=1), {"normal": normal}
     )
     assert external.page_budget(resume, replace(config, page_budget=1), cuts) == []
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("dirty", [False, True])
+def test_footer_geometry_is_identical_across_body_styles(
+    resume, tmp_path, dirty
+) -> None:
+    """Body tokens never reach the footer: every cut gets one 7.5pt line whose
+    three zones do not touch, with the address centred on the page."""
+    from resume_toolkit.version import Stamp
+
+    stamp = Stamp(
+        "2026.01.01+1234567" + (".dirty" if dirty else ""),
+        "2026-01-01",
+        dirty,
+        "2026-01-01 · rev 1234567" + (" (modified)" if dirty else ""),
+    )
+    resume["meta"]["canonical"] = "https://ada.example.org/curriculum-vitae"
+    geometries = []
+    with chromium() as browser:
+        for variant in ["one-page", "2-page", "full"]:
+            footer = render_print_footer(
+                resume,
+                variant=variant,
+                stamp=stamp,
+                style={"--size-base": "9pt", "--leading": "1.2"}
+                if variant == "one-page"
+                else None,
+            )
+            assert footer is not None
+            path = tmp_path / f"{variant}.html"
+            path.write_text(footer)
+            page = open_page(browser, path, 794)
+            page.emulate_media(media="print")
+            zones = page.locator(".running-footer > span").evaluate_all(
+                """els => els.map(e => {
+                    const r = e.getBoundingClientRect();
+                    const s = getComputedStyle(e);
+                    return {left: r.left, right: r.right, top: r.top,
+                            height: r.height, size: s.fontSize,
+                            leading: s.lineHeight, wrap: s.whiteSpace};
+                })"""
+            )
+            left, centre, right = zones
+            assert left["right"] < centre["left"]
+            assert centre["right"] < right["left"]
+            # A4 at 96 dpi: 794 px wide, centred at 397 px.
+            middle = (centre["left"] + centre["right"]) / 2
+            assert middle == pytest.approx(397, abs=0.02)
+            assert {z["size"] for z in zones} == {"10px"}
+            assert {z["leading"] for z in zones} == {"13.5px"}
+            assert {z["wrap"] for z in zones} == {"nowrap"}
+            assert len({z["top"] for z in zones}) == 1
+            geometries.append((centre, right))
+            page.close()
+    assert geometries[0] == geometries[1] == geometries[2]

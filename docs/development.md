@@ -96,7 +96,7 @@ A variant may override tokens declared by the selected theme:
 [one-page]
 include = []
 publish = true
-style = { "--size-base" = "9pt", "--leading" = "1.2", "--section-gap" = "6pt", "--size-footer" = "7.5pt" }
+style = { "--size-base" = "9pt", "--leading" = "1.2", "--section-gap" = "6pt" }
 ```
 
 The renderer appends these custom properties after the theme stylesheet, in
@@ -119,9 +119,9 @@ keep their existing meaning. Custom themes own their geometry and check policy.
 For compact cuts, keep body text at least **9pt**, dates/meta/footer at least
 **7.5pt**, body line-height at least **1.2**, and side margins at least **12 mm**.
 Keep the 15 mm bottom margin for the running footer. These are authoring floors,
-not automatic checks. The historical footer default remains 7.2pt to preserve
-existing cuts; set `--size-footer = "7.5pt"` on a new compact cut. Leave at least
-one body line spare, measure the PDF, and review the rendered result.
+not automatic checks. The footer defaults to 7.5pt; leave `--size-footer` unset
+so every cut prints the same footer. Leave at least one body line spare,
+measure the PDF, and review the rendered result.
 
 ## What gets published
 
@@ -141,13 +141,20 @@ Besides variant artifacts, the site includes `index.html`, a canonical `resume.j
 alias, `llms.txt`, `404.html`, `robots.txt` and a sitemap when `meta.canonical` is set.
 The source link and build provenance come from the content repository, not the
 installed toolkit. A directory without git history has no provenance stamp.
+Readers see the stamp as `2026-10-31 · rev 39140c4` in the PDF footer, the
+screen colophon and the Markdown colophon; machines read `meta.version` as
+CalVer with the hash as SemVer build metadata, `2026.10.31+39140c4`. A build
+with uncommitted edits to `resume.json` is dated today and reads
+`2026-10-31 · rev 39140c4 (modified)` and `2026.10.31+39140c4.dirty`.
 
 ## PDF pages
 
 The classic theme keeps every company on one page; a company taller than a
 page breaks between roles, never inside one. The `page_breaks` check verifies
-this on the PDF. Every PDF page carries the same footer: the variant label,
-the build stamp, the canonical address (a link) and a page number. Chromium
+this on the PDF. Every PDF page carries the same footer, on one line across
+the page width: the variant label and build stamp on the left
+(`One-Page Version · 2026-10-31 · rev 39140c4`), the canonical address (a link)
+centred on the page, and the page number (`1 / 2`) on the right. Chromium
 draws it from the theme's `footer.html.j2` inside the `@page` bottom margin, so
 it cannot overlap content or change pagination. The footer is a Chromium
 footer template, not a CSS margin box: margin boxes would put the footer first

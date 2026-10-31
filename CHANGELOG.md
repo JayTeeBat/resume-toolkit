@@ -14,9 +14,13 @@
   PDF, preview and layout checks, with configuration validation and documented
   readability floors. Classic spacing and small-text tokens preserve defaults.
 
-- Running PDF footer on every page: variant label, build stamp, clickable
-  canonical address and a page number, from the theme's `footer.html.j2`
-  (ADR 0005).
+- Running PDF footer on every page, one line in three zones across the page:
+  variant label and build stamp left, clickable canonical address centred,
+  page number right, from the theme's `footer.html.j2` (ADR 0005). The footer
+  is 7.5pt by default and identical on every cut.
+- `Stamp.label`, the human-readable build stamp (`2026-10-31 · rev 39140c4`,
+  `… (modified)` for uncommitted edits), shown in the PDF footer and the
+  screen and Markdown colophons.
 - `page_breaks` check: no PDF page break inside a role, nor inside a company
   block that fits on one page; read back from the printed PDF.
 - Per-variant `page_budget` table, `published_variants` and
@@ -36,6 +40,11 @@
 - Contact separators are tighter (7pt) so full profile addresses keep the
   header on one line.
 - The screen colophon is hidden in print, where the running footer replaces it.
+- Build versions drop git's `g` prefix and mark uncommitted edits as build
+  metadata: `2026.10.31+39140c4` and `2026.10.31+39140c4.dirty` (was
+  `+g39140c4` and `+g39140c4-dirty`). The colophons show `Stamp.label`
+  instead of the version.
+- Classic `--size-footer` default is 7.5pt (was 7.2pt).
 
 ## 0.1.0
 

@@ -29,8 +29,11 @@ area and so the pagination unchanged. Print hides the in-flow colophon, so its
 text appears once per page.
 
 The footer is one line of four fields spread at equal gaps across the page
-width: variant label, build stamp, canonical address, page number. It reads
-`One-Page Version … 2026-10-31 · rev 39140c4 … latest at example.com/cv … 1 / 2`,
+width, a separator dot centred in each gap: variant label, build stamp,
+canonical address, page number. The screen colophon is the same row minus the
+page number (one shared macro and `.footer-row` class). The separators are
+real text, so the PDF text layer reads
+`One-Page Version · 2026-10-31 · rev 39140c4 · latest at example.com/cv · 1 / 2`,
 the same layout, wording and 7.5pt size on every cut; only the variant label
 and the page count differ. The stamp shown to readers is `Stamp.label`
 (`YYYY-MM-DD · rev <7-char hash>`, with `(modified)` appended for uncommitted edits);

@@ -1,15 +1,24 @@
 {#
-  The colophon's pieces, shared by the screen colophon (template.html.j2) and
-  the running print footer (footer.html.j2), so the two cannot disagree.
-  Separators are drawn in CSS, so a missing piece cannot strand a dangling
-  bullet.
+  The colophon's fields, shared by the screen colophon (template.html.j2) and
+  the running print footer (footer.html.j2), so the two cannot disagree. The
+  separators are flex items of their own, not ::before content: spread with
+  space-between they land in the middle of each gap, and a missing field
+  cannot strand a dangling bullet. They are real text, so the PDF text layer
+  reads "… Version · 2026-10-31 · rev … · latest at … · 1 / 2", not one
+  run-on line.
 #}
-{% macro colophon_items(variant, stamp, canonical) %}
-{% if variant %}<span>{{ variant | title }} Version</span>{% endif %}
-{% if stamp %}<span>{{ stamp.label }}</span>{% endif %}
-{{ latest_link(canonical) }}
-{% endmacro %}
-
-{% macro latest_link(canonical) %}
-{% if canonical %}<span>latest at <a href="{{ canonical }}">{{ canonical | urlhost }}</a></span>{% endif %}
+{% macro colophon_items(variant, stamp, canonical, folio=false) %}
+{%- set ns = namespace(any=false) -%}
+{%- if variant -%}
+<span class="field">{{ variant | title }} Version</span>{% set ns.any = true %}
+{%- endif -%}
+{%- if stamp -%}
+{% if ns.any %}<span class="sep" aria-hidden="true">·</span>{% endif %}<span class="field">{{ stamp.label }}</span>{% set ns.any = true %}
+{%- endif -%}
+{%- if canonical -%}
+{% if ns.any %}<span class="sep" aria-hidden="true">·</span>{% endif %}<span class="field">latest at <a href="{{ canonical }}">{{ canonical | urlhost }}</a></span>{% set ns.any = true %}
+{%- endif -%}
+{%- if folio -%}
+{% if ns.any %}<span class="sep" aria-hidden="true">·</span>{% endif %}<span class="field folio"><span class="pageNumber"></span> / <span class="totalPages"></span></span>
+{%- endif -%}
 {% endmacro %}

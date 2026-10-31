@@ -374,7 +374,7 @@ def test_print_footer_repeats_the_colophon_with_page_placeholders() -> None:
         footer.index("2-Page Version")
         < footer.index("rev 942700c")
         < footer.index("example.com/cv</a>")
-        < footer.index('class="folio"')
+        < footer.index('class="field folio"')
     )
     assert "2-Page Version" in footer
     assert "2026-07-16 · rev 942700c" in footer
@@ -393,3 +393,28 @@ def test_print_footer_is_optional_for_a_theme(tmp_path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
 
     assert render_print_footer({}, theme="plain") is None
+
+
+def test_screen_colophon_is_the_print_footer_without_page_numbers() -> None:
+    """One row on screen and in print: same fields, separators and order."""
+    resume = {**PROFILED, "meta": {"canonical": "https://example.com/cv/"}}
+    stamp = Stamp(
+        version="2026.07.16+942700c",
+        modified="2026-07-16",
+        dirty=False,
+        label="2026-07-16 · rev 942700c",
+    )
+    footer = render_print_footer(resume, variant="2-page", stamp=stamp)
+    html = render_html(resume, variant="2-page", stamp=stamp)
+
+    def row(document: str, start: str) -> str:
+        body = document[document.index(start) :]
+        return body[body.index(">") + 1 : body.index("</footer>")].strip()
+
+    assert footer is not None
+    printed = row(footer, '<footer class="running-footer footer-row"')
+    screen = row(html, '<footer class="colophon footer-row"')
+    folio = printed.index(
+        '<span class="sep" aria-hidden="true">·</span><span class="field folio">'
+    )
+    assert printed[:folio] == screen

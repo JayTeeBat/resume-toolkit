@@ -4,11 +4,8 @@
   of the stylesheet; pageNumber and totalPages are filled in by Chromium.
   Screen HTML never sees it: there the colophon closes the document once.
 #}
-{% from "colophon.html.j2" import latest_link %}
+{% from "colophon.html.j2" import colophon_items %}
 {{ stylesheet }}
-<footer class="running-footer">
-  {% if variant %}<span>{{ variant | title }} Version</span>{% endif %}
-  {% if stamp %}<span>{{ stamp.label }}</span>{% endif %}
-  {{ latest_link(canonical) }}
-  <span class="folio"><span class="pageNumber"></span> / <span class="totalPages"></span></span>
+<footer class="running-footer footer-row">
+  {{ colophon_items(variant, stamp, canonical, folio=true) }}
 </footer>

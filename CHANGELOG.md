@@ -15,8 +15,10 @@
   readability floors. Classic spacing and small-text tokens preserve defaults.
 
 - Running PDF footer on every page, one line of four fields spread at equal
-  gaps across the page: variant label, build stamp, clickable canonical
-  address and page number, from the theme's `footer.html.j2` (ADR 0005). The footer
+  gaps across the page with a dot centred in each gap: variant label, build
+  stamp, clickable canonical address and page number. The screen colophon is
+  the same row without the page number, in the same pale grey (the footer
+  template forces exact print colour so Chromium no longer darkens it), from the theme's `footer.html.j2` (ADR 0005). The footer
   is 7.5pt by default and identical on every cut.
 - `Stamp.label`, the human-readable build stamp (`2026-10-31 · rev 39140c4`,
   `… (modified)` for uncommitted edits), shown in the PDF footer and the

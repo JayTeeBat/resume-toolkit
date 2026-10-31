@@ -292,46 +292,46 @@ a {
 /* --- Colophon ------------------------------------------------------------
    Provenance, deliberately quiet: it identifies the file without competing
    with the CV. On screen it closes the document once. In print it is hidden
-   and .running-footer (footer.html.j2) repeats the same items, plus a page
+   and .running-footer (footer.html.j2) repeats the same row, plus a page
    number, on every page: Chromium draws that footer inside the @page bottom
-   margin, so it never overlaps content or changes the pagination. */
-.colophon {
-  margin-top: var(--section-gap);
-  padding-top: 4pt;
-  border-top: 0.4pt solid var(--rule);
-  font-size: var(--size-footer);
-  color: var(--ink-faint);
-  break-inside: avoid;
-  page-break-inside: avoid;
-}
+   margin, so it never overlaps content or changes the pagination.
 
-/* Separators in CSS, not markup: any piece can be absent without leaving a
-   dangling bullet behind it. */
-.colophon > * + *::before {
-  content: ' · ';
-}
-
-.colophon a,
-.running-footer a {
-  color: inherit;
-  border-bottom: none;
-}
-
-/* Chromium lays the footer template out in the bottom page margin at full
-   page width; the side padding repeats the @page side margins. Its fields
-   spread with equal gaps between them, so the width itself separates them
-   and no dots are needed. */
-.running-footer {
+   Both are one .footer-row: fields and their separators spread from margin
+   to margin with equal gaps, so the screen colophon and the PDF footer have
+   the same shape, type and colour. */
+.footer-row {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  width: 100%;
-  padding: 0 14mm;
   font-family: var(--font);
   font-size: var(--size-footer);
   line-height: 1.35;
   white-space: nowrap;
   color: var(--ink-faint);
+  /* Chromium prints footer templates in economy colour unless told not to,
+     which darkens --ink-faint to near-black. */
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.footer-row a {
+  color: inherit;
+  border-bottom: none;
+}
+
+.colophon {
+  margin-top: var(--section-gap);
+  padding-top: 4pt;
+  border-top: 0.4pt solid var(--rule);
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+/* Chromium lays the footer template out in the bottom page margin at full
+   page width; the side padding repeats the @page side margins. */
+.running-footer {
+  width: 100%;
+  padding: 0 14mm;
 }
 
 .folio { font-variant-numeric: tabular-nums; }
@@ -374,6 +374,14 @@ a {
   }
 
   .contact li + li::before { content: none; }
+
+  /* Too narrow to spread: the colophon wraps as a plain dotted line. */
+  .colophon {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 0 4pt;
+    white-space: normal;
+  }
 
   .skills {
     grid-template-columns: 1fr;

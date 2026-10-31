@@ -258,11 +258,11 @@
     months later cannot tell which cut it is, how old it is, or whether a newer
     one exists. The colophon answers all three. On screen it closes the
     document once; in print it is hidden, and footer.html.j2 repeats the same
-    items with a page number at the foot of every page.
+    row, plus a page number, at the foot of every page.
   #}
   {% set canonical = (resume.get('meta') or {}).get('canonical') %}
   {% if variant or stamp or canonical %}
-  <footer class="colophon">
+  <footer class="colophon footer-row">
     {{ colophon_items(variant, stamp, canonical) }}
   </footer>
   {% endif %}

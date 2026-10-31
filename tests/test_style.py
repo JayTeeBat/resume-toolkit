@@ -135,7 +135,8 @@ def test_footer_geometry_is_identical_across_body_styles(
     resume, tmp_path, dirty
 ) -> None:
     """Body tokens never reach the footer: every cut gets one 7.5pt line whose
-    four fields sit at equal gaps from margin to margin."""
+    four fields sit at equal gaps from margin to margin, a separator centred
+    in each gap."""
     from resume_toolkit.version import Stamp
 
     stamp = Stamp(
@@ -161,7 +162,7 @@ def test_footer_geometry_is_identical_across_body_styles(
             path.write_text(footer)
             page = open_page(browser, path, 794)
             page.emulate_media(media="print")
-            zones = page.locator(".running-footer > span").evaluate_all(
+            zones = page.locator(".running-footer > .field").evaluate_all(
                 """els => els.map(e => {
                     const r = e.getBoundingClientRect();
                     const s = getComputedStyle(e);
@@ -171,6 +172,12 @@ def test_footer_geometry_is_identical_across_body_styles(
                 })"""
             )
             assert len(zones) == 4
+            seps = page.locator(".running-footer > .sep").evaluate_all(
+                "els => els.map(e => e.getBoundingClientRect())"
+                ".map(r => (r.left + r.right) / 2)"
+            )
+            for sep, (a, b) in zip(seps, itertools.pairwise(zones), strict=True):
+                assert sep == pytest.approx((a["right"] + b["left"]) / 2, abs=0.5)
             gaps = [b["left"] - a["right"] for a, b in itertools.pairwise(zones)]
             assert min(gaps) > 0
             assert max(gaps) - min(gaps) == pytest.approx(0, abs=0.02)

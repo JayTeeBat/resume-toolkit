@@ -152,9 +152,11 @@ with uncommitted edits to `resume.json` is dated today and reads
 The classic theme keeps every company on one page; a company taller than a
 page breaks between roles, never inside one. The `page_breaks` check verifies
 this on the PDF. Every PDF page carries the same footer, on one line across
-the page width: four fields at equal gaps from margin to margin, the variant
-label (`One-Page Version`), the build stamp (`2026-10-31 · rev 39140c4`), the
-canonical address (a link) and the page number (`1 / 2`). Chromium
+the page width: four fields at equal gaps from margin to margin, a `·` centred
+in each gap, the variant label (`One-Page Version`), the build stamp
+(`2026-10-31 · rev 39140c4`), the canonical address (a link) and the page
+number (`1 / 2`). The screen HTML closes with the same row, same type and
+colour, minus the page number. Chromium
 draws it from the theme's `footer.html.j2` inside the `@page` bottom margin, so
 it cannot overlap content or change pagination. The footer is a Chromium
 footer template, not a CSS margin box: margin boxes would put the footer first

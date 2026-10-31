@@ -227,10 +227,10 @@ def test_pdf_repeats_one_footer_with_page_numbers_on_every_page(
 
     pages = pypdf.PdfReader(str(written[0].path)).pages
     assert len(pages) >= 2
-    footer = f"{variant.title()} Version {label} latest at example.com/cv"
+    footer = f"{variant.title()} Version · {label} · latest at example.com/cv"
     for number, page in enumerate(pages, start=1):
         lines = page.extract_text().splitlines()
-        assert lines[-1] == f"{footer} {number} / {len(pages)}"
+        assert lines[-1] == f"{footer} · {number} / {len(pages)}"
         assert sum(footer in line for line in lines) == 1
         # The canonical address stays clickable on every page.
         uris = [a.get_object()["/A"].get("/URI") for a in page.get("/Annots") or []]

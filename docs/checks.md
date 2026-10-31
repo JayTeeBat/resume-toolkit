@@ -30,6 +30,8 @@ advice within the hard bounds. Minimal policy: an empty TOML file.
 | `quantified` | At least one digit in each published work entry's summary/highlights |
 | `lengths` | `summary_sentences = 1`, `summary_soft_max = 25`, `summary_hard_max = 30`; minimum 1 word |
 | `lengths` | `highlight_soft_range = [10, 30]`, `highlight_hard_range = [3, 40]`; whitespace-separated words |
+| `required_sections` | `required_sections = {}`; required non-empty sections after filtering, wildcard plus variant union |
+| `role_highlights` | `role_highlights = {}`; per-variant minimum nonblank work highlights, optionally since a month |
 | `highlights` | Each work entry has at least one nonblank highlight |
 | `locations` | `location_pattern = '[^,\s][^,]*, [^,\s][^,]*'`; full match for City, Country |
 | `tags` | Tags name variants or their included tags; `*` is a selector, never a tag |
@@ -46,14 +48,14 @@ advice within the hard bounds. Minimal policy: an empty TOML file.
 
 ### Which cuts are checked
 
-`quantified`, `page_budget`, `header` and `page_breaks` check cuts, not the
+`required_sections`, `role_highlights`, `quantified`, `page_budget`, `header` and `page_breaks` check cuts, not the
 whole document. `published_variants = []` selects every variant with
 `publish = true`, in `variants.toml` order, or all entries if none is
 published. A list, e.g. `published_variants = ["one-page"]`, selects those
 variants instead. A scalar `page_budget` binds every checked cut; a table binds
 only the cuts it names, so an unnamed cut (a complete CV, say) has no budget.
 
-`variant_exemptions` drops one of those four rules for one cut, e.g.
+`variant_exemptions` drops one of those variant rules for one cut, e.g.
 `variant_exemptions = { full = ["quantified"] }` when the complete cut keeps
 unquantified internships. Every variant name in `published_variants`, a budget
 table or `variant_exemptions` must exist in `variants.toml`.
@@ -101,3 +103,28 @@ The spelling rule enforces a curated consistency list, not a full dictionary.
 
 Each content repository owns its editorial policy and exceptions.
 Toolkit tests use fictional fixtures; the example CLI tests exercise default policy.
+
+### Required content after filtering
+
+Both coverage rules are hard, run under `--fast`, and default to empty tables
+(no requirements). Enable them through `enabled` like other rules.
+
+```toml
+[required_sections]
+"*" = ["basics", "work", "education", "skills"]
+"one-page" = ["education", "languages"]
+
+[role_highlights]
+"one-page" = { min = 1, since = "2010-06" }
+```
+
+Required sections use the union of `"*"` and the variant list: shared policy
+cannot accidentally disappear when adding a variant-specific requirement.
+Missing or empty top-level sections fail after filtering. Role minima count
+nonblank highlights in each surviving work entry. With `since` (inclusive
+`YYYY-MM`), only roles starting on/after that month qualify, and those source
+roles must also survive filtering. Without `since`, dropped roles are exempt.
+Diagnostics identify the source role and the `x-tags` or `x-highlights` entries
+to change; no wording is generated. `min` must be a nonnegative integer.
+Unknown variant names, invalid month dates and malformed tables are errors.
+Only `required_sections` accepts the wildcard key.

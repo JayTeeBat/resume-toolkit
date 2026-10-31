@@ -22,6 +22,8 @@ RULE_FUNCTIONS: dict[str, Rule] = {
         prose.quantified,
         prose.lengths,
         structure.highlights,
+        structure.required_sections,
+        structure.role_highlights,
         structure.locations,
         structure.tags,
         structure.chronology,
@@ -53,7 +55,10 @@ def run_checks(
     for name in config.enabled:
         if fast and name in BROWSER_RULES:
             continue
-        if name in {"chronology", "overlaps", "gaps"} and invalid_dates:
+        if (
+            name in {"chronology", "overlaps", "gaps", "role_highlights"}
+            and invalid_dates
+        ):
             # Keep prerequisites visible even if the date rule was disabled.
             if "dates" not in config.enabled and not any(
                 v.rule == "dates" for v in violations

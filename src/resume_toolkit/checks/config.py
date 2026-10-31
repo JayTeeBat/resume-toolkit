@@ -20,6 +20,8 @@ RULES = (
     "quantified",
     "lengths",
     "highlights",
+    "required_sections",
+    "role_highlights",
     "locations",
     "tags",
     "chronology",
@@ -37,7 +39,7 @@ RULES = (
 #: Rules that print or lay out the CV in Chromium; `--fast` skips them.
 BROWSER_RULES = frozenset({"page_budget", "header", "page_breaks"})
 #: Rules that check each published cut rather than the whole document.
-VARIANT_RULES = BROWSER_RULES | {"quantified"}
+VARIANT_RULES = BROWSER_RULES | {"quantified", "required_sections", "role_highlights"}
 
 
 class ConfigError(ValueError):
@@ -60,6 +62,8 @@ class CheckConfig:
     gap_allowlist: dict[tuple[str, str], str] = field(default_factory=dict)
     shared_skill_keywords: list[str] = field(default_factory=list)
     required_fields: dict[str, list[str]] = field(default_factory=dict)
+    required_sections: dict[str, list[str]] = field(default_factory=dict)
+    role_highlights: dict[str, dict[str, int | str]] = field(default_factory=dict)
     date_format: str = "YYYY-MM"
     summary_sentences: int = 1
     summary_soft_max: int = 25
@@ -125,11 +129,11 @@ def load_config(path: Path = Path("resume-checks.toml")) -> CheckConfig:
             raise ConfigError(
                 "proper_names: expected non-empty wrong = correct strings"
             )
-        if key == "required_fields" and any(
+        if key in {"required_fields", "required_sections"} and any(
             not isinstance(v, list) or any(not isinstance(f, str) or not f for f in v)
             for v in value.values()
         ):
-            raise ConfigError("required_fields: expected section = [field names]")
+            raise ConfigError(f"{key}: expected name = [non-empty strings]")
         if key == "variant_exemptions" and any(
             not isinstance(v, list) or any(r not in VARIANT_RULES for r in v)
             for v in value.values()
@@ -138,6 +142,22 @@ def load_config(path: Path = Path("resume-checks.toml")) -> CheckConfig:
                 "variant_exemptions: expected variant = [rule names] among "
                 + ", ".join(sorted(VARIANT_RULES))
             )
+    for name, policy in raw.get("role_highlights", {}).items():
+        if (
+            not isinstance(policy, dict)
+            or policy.keys() - {"min", "since"}
+            or type(policy.get("min")) is not int
+            or policy["min"] < 0
+        ):
+            raise ConfigError(
+                f"role_highlights.{name}: expected min = nonnegative integer "
+                "and optional since = YYYY-MM"
+            )
+        if "since" in policy and (
+            not isinstance(policy["since"], str)
+            or not date_pattern("YYYY-MM").fullmatch(policy["since"])
+        ):
+            raise ConfigError(f"role_highlights.{name}.since: write YYYY-MM")
     gaps = {}
     for bounds, reason in raw.get("gap_allowlist", {}).items():
         parts = bounds.split("..")
@@ -191,6 +211,8 @@ def published_variants(
     for key, names in (
         ("published_variants", config.published_variants),
         ("variant_exemptions", config.variant_exemptions),
+        ("required_sections", [n for n in config.required_sections if n != "*"]),
+        ("role_highlights", config.role_highlights),
         (
             "page_budget",
             config.page_budget if isinstance(config.page_budget, dict) else {},

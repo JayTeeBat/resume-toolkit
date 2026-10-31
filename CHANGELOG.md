@@ -6,6 +6,10 @@
 
 ### Added
 
+- Fast, hard `required_sections` and `role_highlights` rules enforce configured
+  content coverage after variant filtering, including required source roles.
+- Standards register with a pin-drift test.
+
 - Per-variant `style` tables override declared theme design tokens in HTML,
   PDF, preview and layout checks, with configuration validation and documented
   readability floors. Classic spacing and small-text tokens preserve defaults.

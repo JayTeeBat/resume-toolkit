@@ -88,6 +88,41 @@ The substring must match exactly **one** bullet; the build fails loudly if an ed
 breaks the match, because a rule that silently stopped matching would silently republish the
 bullet everywhere. Like `x-tags`, `x-highlights` is stripped before rendering.
 
+### Per-variant design tokens
+
+A variant may override tokens declared by the selected theme:
+
+```toml
+[one-page]
+include = []
+publish = true
+style = { "--size-base" = "9pt", "--leading" = "1.2", "--section-gap" = "6pt", "--size-footer" = "7.5pt" }
+```
+
+The renderer appends these custom properties after the theme stylesheet, in
+both HTML and the separate PDF footer document. Builds, previews and Chromium
+checks use the same overrides; other variants keep the theme defaults. JSON
+and Markdown are unaffected. Unknown variant keys, incorrect types, non-custom
+property names, unknown theme tokens and unsafe values fail with a configuration
+error. Values must be nonempty strings without `;`, `{`, `}`, `<`, backslashes,
+CSS comments or control characters. Unknown tokens are checked when rendering
+against the selected theme. This validates the declaration boundary, not every
+CSS value grammar; inspect the computed layout after changing tokens.
+
+The classic theme exposes body size, leading, section and entry gaps, heading
+gap/padding, role and summary gaps, highlights and bullet gaps, skills row gap,
+and company, title, meta and footer sizes. Defaults live in `style.css`.
+Page margins remain fixed at 15 mm vertically and 14 mm horizontally; variant
+style cannot change them. Thus `print_content_width` and `print_content_height`
+keep their existing meaning. Custom themes own their geometry and check policy.
+
+For compact cuts, keep body text at least **9pt**, dates/meta/footer at least
+**7.5pt**, body line-height at least **1.2**, and side margins at least **12 mm**.
+Keep the 15 mm bottom margin for the running footer. These are authoring floors,
+not automatic checks. The historical footer default remains 7.2pt to preserve
+existing cuts; set `--size-footer = "7.5pt"` on a new compact cut. Leave at least
+one body line spare, measure the PDF, and review the rendered result.
+
 ## What gets published
 
 The published JSON is not a copy of `resume.json`: it is the *variant-filtered* document — the same

@@ -176,7 +176,9 @@ def page_breaks(
             out = Path(tmp) / target.name
             html = build_variant(resume, target, formats=("html",), out_dir=out)[0].path
             data = apply_variant(resume, target)
-            footer = render_print_footer(data, variant=target.name, stamp=build_stamp())
+            footer = render_print_footer(
+                data, variant=target.name, stamp=build_stamp(), style=target.style
+            )
 
             measure = open_page(browser, html, config.print_content_width)
             measure.emulate_media(media="print")

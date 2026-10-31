@@ -11,6 +11,7 @@ from jinja2 import Environment, FileSystemLoader
 from markupsafe import Markup
 
 from .paths import THEMES_DIR
+from .variants import validate_style
 from .version import Stamp
 
 MONTHS = (
@@ -140,7 +141,7 @@ def _environment(theme_path: Path, *, autoescape: bool = True) -> Environment:
     return env
 
 
-def _inline_stylesheet(theme_path: Path) -> Markup:
+def _inline_stylesheet(theme_path: Path, style: dict[str, str] | None = None) -> Markup:
     """Read style.css and embed its fonts as data URIs, returning a <style> tag.
 
     Inlining serves both outputs: the HTML export becomes a single portable
@@ -163,6 +164,19 @@ def _inline_stylesheet(theme_path: Path) -> Markup:
         embed,
         css,
     )
+    if style:
+        validate_style(style)
+        known = set(re.findall(r"(--[\w-]+)\s*:", css))
+        unknown = style.keys() - known
+        if unknown:
+            raise ValueError(
+                f"style: unknown theme tokens: {', '.join(sorted(unknown))}"
+            )
+        css += (
+            "\n:root {\n"
+            + "".join(f"  {key}: {value};\n" for key, value in style.items())
+            + "}\n"
+        )
     # Markup, not str: autoescape is on, and CSS must reach the page as markup.
     return Markup(f"<style>\n{css}\n</style>")
 
@@ -173,6 +187,7 @@ def render_html(
     *,
     variant: str | None = None,
     stamp: Stamp | None = None,
+    style: dict[str, str] | None = None,
 ) -> str:
     """Render resume data to a single self-contained HTML document.
 
@@ -186,7 +201,7 @@ def render_html(
     template = env.get_template("template.html.j2")
     return template.render(
         resume=resume,
-        stylesheet=_inline_stylesheet(path),
+        stylesheet=_inline_stylesheet(path, style),
         generated=date.today().isoformat(),
         variant=variant,
         stamp=stamp,
@@ -199,6 +214,7 @@ def render_print_footer(
     *,
     variant: str | None = None,
     stamp: Stamp | None = None,
+    style: dict[str, str] | None = None,
 ) -> str | None:
     """Render the theme's running PDF footer, or None if it has none.
 
@@ -212,7 +228,7 @@ def render_print_footer(
         _environment(path)
         .get_template("footer.html.j2")
         .render(
-            stylesheet=_inline_stylesheet(path),
+            stylesheet=_inline_stylesheet(path, style),
             variant=variant,
             stamp=stamp,
             canonical=(resume.get("meta") or {}).get("canonical"),

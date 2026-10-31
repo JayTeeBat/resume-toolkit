@@ -33,7 +33,9 @@ def build_variant(
     # Stamped once per variant, not per format, so the artifacts of the same
     # cut can never disagree about what they are.
     stamp = build_stamp()
-    html = render_html(data, theme=theme, variant=variant.name, stamp=stamp)
+    html = render_html(
+        data, theme=theme, variant=variant.name, stamp=stamp, style=variant.style
+    )
     out_dir.mkdir(parents=True, exist_ok=True)
 
     written: list[Artifact] = []
@@ -46,7 +48,7 @@ def build_variant(
     if "pdf" in formats:
         path = out_dir / f"resume-{variant.name}.pdf"
         footer = render_print_footer(
-            data, theme=theme, variant=variant.name, stamp=stamp
+            data, theme=theme, variant=variant.name, stamp=stamp, style=variant.style
         )
         html_to_pdf(html, path, footer)
         written.append(Artifact(variant.name, "pdf", path))

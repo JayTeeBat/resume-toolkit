@@ -64,7 +64,10 @@ by default. The old key fails with that hint.
 
 The default print width is A4 minus two 14 mm margins at 96 dpi, and the
 default print height A4 minus two 15 mm margins. Custom themes with different
-margins should override both.
+margins should override both. Variant `style` tokens are applied to the HTML
+and footer used by all three Chromium rules, including the unbroken height
+measurement. Classic theme margins are fixed, so token overrides do not change
+these dimensions. See [variant styling](development.md#per-variant-design-tokens).
 
 ### How `page_breaks` finds page breaks
 

@@ -6,6 +6,10 @@
 
 ### Added
 
+- Per-variant `style` tables override declared theme design tokens in HTML,
+  PDF, preview and layout checks, with configuration validation and documented
+  readability floors. Classic spacing and small-text tokens preserve defaults.
+
 - Running PDF footer on every page: variant label, build stamp, clickable
   canonical address and a page number, from the theme's `footer.html.j2`
   (ADR 0005).

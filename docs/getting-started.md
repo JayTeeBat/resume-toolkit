@@ -27,7 +27,8 @@ uv run resume serve
 
 `dist/` holds generated outputs. Keep it out of git. Commit your content so
 build stamps can identify its revision. See [development](development.md#variants)
-for tags and per-highlight selection.
+for tags, per-highlight selection and per-variant design tokens with readability
+floors.
 
 ## Publish with GitHub Pages
 

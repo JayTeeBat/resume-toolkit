@@ -19,8 +19,9 @@ republish the bullet everywhere.
 
 from __future__ import annotations
 
+import re
 import tomllib
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from .paths import VARIANTS_TOML
@@ -54,6 +55,7 @@ class Variant:
     #: Defaults to False so a new variant — typically a CV tailored to one
     #: employer — is never published by accident. Publishing is opt-in.
     publish: bool = False
+    style: dict[str, str] = field(default_factory=dict)
 
     @property
     def includes_everything(self) -> bool:
@@ -70,15 +72,51 @@ class BadHighlightPattern(Exception):
 
 def load_variants(path: Path = VARIANTS_TOML) -> dict[str, Variant]:
     raw = tomllib.loads(path.read_text(encoding="utf-8"))
-    return {
-        name: Variant(
+    variants = {}
+    for name, body in raw.items():
+        if not isinstance(body, dict):
+            raise ValueError(f"variant {name}: expected a table")
+        unknown = body.keys() - {"description", "include", "publish", "style"}
+        if unknown:
+            raise ValueError(
+                f"variant {name}: unknown keys: {', '.join(sorted(unknown))}"
+            )
+        if not isinstance(body.get("description", ""), str):
+            raise ValueError(f"variant {name}.description: expected a string")
+        include = body.get("include", [])
+        if not isinstance(include, list) or any(
+            not isinstance(t, str) for t in include
+        ):
+            raise ValueError(f"variant {name}.include: expected a list of strings")
+        if not isinstance(body.get("publish", False), bool):
+            raise ValueError(f"variant {name}.publish: expected a boolean")
+        style = body.get("style", {})
+        validate_style(style, where=f"variant {name}.style")
+        variants[name] = Variant(
             name=name,
             description=body.get("description", ""),
-            include=frozenset(body.get("include", [])),
-            publish=bool(body.get("publish", False)),
+            include=frozenset(include),
+            publish=body.get("publish", False),
+            style=style,
         )
-        for name, body in raw.items()
-    }
+    return variants
+
+
+def validate_style(style: dict[str, str], *, where: str = "style") -> None:
+    """Reject declarations that could escape the variant's custom properties."""
+    if not isinstance(style, dict):
+        raise ValueError(f"{where}: expected a table of CSS custom properties")
+    for key, value in style.items():
+        if not re.fullmatch(r"--[a-zA-Z_][a-zA-Z0-9_-]*", key):
+            raise ValueError(f"{where}: {key!r} must be a CSS custom property")
+        if (
+            not isinstance(value, str)
+            or not value.strip()
+            or any(c in value for c in ";{}<\\")
+            or "/*" in value
+            or any(ord(c) < 32 for c in value)
+        ):
+            raise ValueError(f"{where}.{key}: expected a nonempty, safe CSS value")
 
 
 def get_variant(name: str, path: Path = VARIANTS_TOML) -> Variant:

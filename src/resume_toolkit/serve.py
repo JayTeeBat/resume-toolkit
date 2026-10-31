@@ -80,6 +80,7 @@ def serve_preview(
                 theme=theme,
                 variant=variant.name,
                 stamp=build_stamp(),
+                style=variant.style,
             )
         except Exception as exc:  # noqa: BLE001 - show it in the page, don't kill the server
             return _error_page(f"{type(exc).__name__}: {exc}")

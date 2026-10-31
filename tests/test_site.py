@@ -112,6 +112,10 @@ def test_index_leads_with_the_primary_cut_and_offers_the_rest(resume) -> None:
     for name in ("one-page", "2-page", "full"):
         actions = re.findall(rf'href="resume-{name}\.\w+"[^>]*>(\w+)</a>', index)
         assert actions == ["HTML", "PDF", "JSON", "Markdown"]
+        # Descriptions are author notes, kept for llms.txt but not shown.
+        assert f"The {name} cut" not in index
+    assert "Built from" not in index
+    assert re.search(r"<footer>Updated \d{4}-\d{2}-\d{2}</footer>", index)
 
 
 def test_index_with_one_cut_shows_actions_only(resume) -> None:
@@ -128,6 +132,7 @@ def test_llms_txt_names_the_primary_cut_and_lists_every_cut(resume) -> None:
     assert "primary published cut (one-page)" in llms
     for name in ("one-page", "2-page", "full"):
         assert f"resume-{name}.pdf" in llms
+        assert f"The {name} cut" in llms
 
 
 @pytest.mark.slow

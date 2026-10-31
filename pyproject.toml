@@ -1,6 +1,6 @@
 [project]
 name = "resume-toolkit"
-version = "0.2.0"
+version = "0.2.1"
 description = "Validate JSON Resume content and render HTML, PDF, JSON, Markdown and static sites"
 readme = "README.md"
 license = "MIT"

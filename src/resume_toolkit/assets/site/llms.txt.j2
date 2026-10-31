@@ -20,7 +20,7 @@ machine consumption, prefer the JSON.
 
 ## Machine-readable
 
-- [resume.json]({{ base }}resume.json): canonical JSON Resume (v1.0.0 schema), the published cut, with build provenance in `meta`
+- [resume.json]({{ base }}resume.json): canonical JSON Resume (v1.0.0 schema), the primary published cut{% if cards | length > 1 %} ({{ cards[0].name }}){% endif %}, with build provenance in `meta`
 
 ## Other formats
 

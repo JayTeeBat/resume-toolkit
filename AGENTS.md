@@ -1,5 +1,7 @@
 # AGENTS.md
 
+See the [standards register](docs/standards.md) for scope and enforcement.
+
 ## Repository Purpose
 
 Validate and render JSON Resume content as HTML, PDF, JSON, Markdown,

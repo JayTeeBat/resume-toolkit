@@ -5,9 +5,18 @@ import pytest
 from resume_toolkit.checks.config import (
     CheckConfig,
     ConfigError,
+    checked_variants,
     load_config,
-    published_variant,
+    page_budget_for,
+    published_variants,
 )
+from resume_toolkit.variants import Variant
+
+CUTS = {
+    "full": Variant("full", "", frozenset({"*"})),
+    "short": Variant("short", "", frozenset(), publish=True),
+    "one": Variant("one", "", frozenset(), publish=True),
+}
 
 
 def test_missing_and_empty_configs_use_defaults(tmp_path) -> None:
@@ -23,6 +32,13 @@ def test_missing_and_empty_configs_use_defaults(tmp_path) -> None:
         ("unknown = 1", "unknown checks key"),
         ("page_budget = true", "page_budget: expected int"),
         ("page_budget = 0", "positive integer"),
+        ("page_budget = {}", "table of variant = positive integer"),
+        ("page_budget = { short = 0 }", "table of variant = positive integer"),
+        ('page_budget = { short = "2" }', "table of variant = positive integer"),
+        ('published_variant = "short"', "replaced in 0.2.0 by published_variants"),
+        ("published_variants = [1]", "list of str"),
+        ('[variant_exemptions]\nfull = ["lengths"]', "variant_exemptions"),
+        ('[variant_exemptions]\nfull = "quantified"', "variant_exemptions"),
         ('spelling = "en-US"', "spelling: choose"),
         ('enabled = ["typo"]', "unknown rules"),
         ('enabled = ["dates", "dates"]', "duplicate"),
@@ -59,6 +75,46 @@ def test_nondefault_policy_and_gap_dates_load(tmp_path) -> None:
     assert config.gap_allowlist == {("1840-01", "1841-01"): "Study"}
 
 
-def test_unknown_published_variant_is_actionable() -> None:
-    with pytest.raises(ConfigError, match="published_variant"):
-        published_variant(CheckConfig(published_variant="missing"), {})
+def test_page_budget_table_binds_only_the_cuts_it_names(tmp_path) -> None:
+    path = tmp_path / "checks.toml"
+    path.write_text("page_budget = { short = 2, one = 1 }")
+    config = load_config(path)
+
+    assert config.page_budget == {"short": 2, "one": 1}
+    assert page_budget_for(config, "one") == 1
+    assert page_budget_for(config, "full") is None
+    assert page_budget_for(CheckConfig(), "full") == 2
+
+
+def test_variant_rules_cover_every_published_cut_in_file_order() -> None:
+    assert [v.name for v in published_variants(CheckConfig(), CUTS)] == [
+        "short",
+        "one",
+    ]
+    explicit = CheckConfig(published_variants=["one", "full"])
+    assert [v.name for v in published_variants(explicit, CUTS)] == ["one", "full"]
+    # Nothing published: the whole document stands in.
+    assert [v.name for v in published_variants(CheckConfig(), {})] == ["all"]
+
+
+def test_variant_exemptions_drop_one_rule_for_one_cut() -> None:
+    config = CheckConfig(variant_exemptions={"one": ["quantified"]})
+
+    assert [v.name for v in checked_variants("quantified", config, CUTS)] == ["short"]
+    assert [v.name for v in checked_variants("header", config, CUTS)] == [
+        "short",
+        "one",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("config", "key"),
+    [
+        (CheckConfig(published_variants=["missing"]), "published_variants"),
+        (CheckConfig(page_budget={"missing": 1}), "page_budget"),
+        (CheckConfig(variant_exemptions={"missing": ["header"]}), "variant_exemptions"),
+    ],
+)
+def test_unknown_variant_names_are_actionable(config, key) -> None:
+    with pytest.raises(ConfigError, match=f"{key}: 'missing' not in variants.toml"):
+        published_variants(config, CUTS)

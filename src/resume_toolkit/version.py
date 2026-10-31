@@ -12,6 +12,14 @@ major/minor/patch would be a judgement call on every edit with nothing riding on
 the outcome. A date answers the only question a reader has, which is how current
 this is. The short hash rides along so any PDF in the wild can be rebuilt
 exactly.
+
+Two spellings of the same facts. `version` is for machines: CalVer with the
+hash as SemVer build metadata, `2026.07.16+942700c`, and `+942700c.dirty` for
+uncommitted edits (dot-separated identifiers, so still valid build metadata).
+`label` is for readers, shown identically in the PDF footer, the screen
+colophon and the Markdown colophon: `2026-07-16 · rev 942700c`, or
+`2026-07-16 · rev 942700c (modified)`. Templates print `label` rather than
+re-deriving it from `version`.
 """
 
 from __future__ import annotations
@@ -26,12 +34,14 @@ from .paths import REPO_ROOT, RESUME_JSON
 
 @dataclass(frozen=True)
 class Stamp:
-    #: CalVer + commit, e.g. "2026.07.16+g942700c" or "...-dirty".
+    #: CalVer + commit, e.g. "2026.07.16+942700c" or "...+942700c.dirty".
     version: str
     #: ISO date the content last changed.
     modified: str
     #: True when the source has uncommitted edits, so the hash alone is a lie.
     dirty: bool
+    #: For readers, e.g. "2026-07-16 · rev 942700c" or "... (modified)".
+    label: str
 
 
 def _git(*args: str) -> str | None:
@@ -64,17 +74,22 @@ def build_stamp(source: Path = RESUME_JSON) -> Stamp | None:
     you would check out to reproduce the build.
     """
     committed = _git("log", "-1", "--format=%cs", "--", str(source))
-    sha = _git("rev-parse", "--short", "HEAD")
+    sha = _git("rev-parse", "HEAD")
     if not committed or not sha:
         return None
 
     dirty = bool(_git("status", "--porcelain", "--", str(source)))
     # Uncommitted edits are by definition newer than the last commit, so the
-    # commit date would understate them. Today is the truthful answer, and
-    # -dirty says the hash does not fully describe this file.
+    # commit date would understate them. Today is the truthful answer; the dirty
+    # metadata and display label say the hash is not the whole file.
     modified = date.today().isoformat() if dirty else committed
 
-    version = f"{modified.replace('-', '.')}+g{sha}"
+    # Exactly seven characters: `--short` grows the hash when a prefix is
+    # ambiguous, which would make the label's width depend on repo size.
+    sha = sha[:7]
+    version = f"{modified.replace('-', '.')}+{sha}"
+    label = f"{modified} · rev {sha}"
     if dirty:
-        version += "-dirty"
-    return Stamp(version=version, modified=modified, dirty=dirty)
+        version += ".dirty"
+        label += " (modified)"
+    return Stamp(version=version, modified=modified, dirty=dirty, label=label)

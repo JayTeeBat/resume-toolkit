@@ -1,5 +1,6 @@
 """Each editorial rule accepts a fixture and reports actionable bad input."""
 
+import shutil
 from dataclasses import replace
 
 import pytest
@@ -7,8 +8,10 @@ from conftest import FIXTURES
 
 from resume_toolkit.checks import RULE_FUNCTIONS, external, run_checks, structure
 from resume_toolkit.checks.common import clip
-from resume_toolkit.checks.config import CheckConfig
-from resume_toolkit.variants import load_variants
+from resume_toolkit.checks.config import BROWSER_RULES, CheckConfig
+from resume_toolkit.checks.prose import quantified as prose_quantified
+from resume_toolkit.paths import THEMES_DIR
+from resume_toolkit.variants import Variant, load_variants
 
 CUTS = load_variants(FIXTURES / "variants.toml")
 POLICY = CheckConfig(
@@ -115,9 +118,7 @@ def test_bad_dates_do_not_crash_timeline_rules(resume) -> None:
 def test_missing_sections_are_supported() -> None:
     policy = replace(
         POLICY,
-        enabled=[
-            r for r in POLICY.enabled if r not in {"codespell", "page_budget", "header"}
-        ],
+        enabled=[r for r in POLICY.enabled if r not in BROWSER_RULES | {"codespell"}],
     )
     assert run_checks({}, policy, {}) == []
 
@@ -168,12 +169,12 @@ def test_fast_skips_only_browser_rules(resume, monkeypatch) -> None:
     def forbidden(*args, **kwargs):
         pytest.fail("fast mode launched a browser")
 
-    for name in ("page_budget", "header"):
+    for name in BROWSER_RULES:
         monkeypatch.setitem(RULE_FUNCTIONS, name, forbidden)
     assert (
         run_checks(
             resume,
-            replace(POLICY, enabled=["page_budget", "header", "punctuation"]),
+            replace(POLICY, enabled=[*sorted(BROWSER_RULES), "punctuation"]),
             CUTS,
             fast=True,
         )
@@ -190,6 +191,93 @@ def test_page_budget_accepts_short_and_reports_long_document(resume) -> None:
     assert violation.rule == "page_budget"
     assert "budget 1" in violation.text
     assert "trim or tag entries" in violation.fix
+
+
+#: Two published cuts: the fixture's short cut, plus a one-page cut that keeps
+#: the same entries, for per-variant budgets and exemptions.
+TWO_CUTS = {**CUTS, "one": Variant("one", "", frozenset(), publish=True)}
+
+
+def test_quantified_judges_each_published_cut_and_names_the_failing_ones(
+    resume,
+) -> None:
+    resume["work"][0]["summary"] = "Build engines."
+    resume["work"][0]["highlights"].append("Lead engineers on reliable engines.")
+    resume["work"][0]["x-highlights"] = {"Lead 12": ["full"]}
+    assert prose_quantified(resume, POLICY, CUTS)[0].where == (
+        "$.work[0]  (Analytical Engines — Lead Engineer; in short)"
+    )
+    (violation,) = prose_quantified(resume, POLICY, TWO_CUTS)
+    assert violation.where.endswith("in short, one)")
+    exempt = replace(POLICY, variant_exemptions={"short": ["quantified"]})
+    assert prose_quantified(resume, exempt, TWO_CUTS)[0].where.endswith("in one)")
+
+
+@pytest.mark.slow
+def test_page_budget_applies_per_variant_table(resume) -> None:
+    resume["work"][0]["highlights"] *= 60
+    config = replace(POLICY, page_budget={"one": 1})
+    (violation,) = external.page_budget(resume, config, TWO_CUTS)
+    assert violation.where == "variant one"
+    assert "budget 1" in violation.text
+    # A cut the table does not name has no budget.
+    assert external.page_budget(resume, replace(POLICY, page_budget={}), CUTS) == []
+
+
+def _company_at_page_foot(resume: dict) -> dict:
+    """A second, two-role company that starts near the foot of page 1.
+
+    33 bullets place the break between that company's two roles when nothing
+    keeps the company together (30–36 all do, so the margin is wide).
+    """
+    resume["work"][0]["highlights"] *= 33
+    resume["work"][1]["x-tags"] = []
+    resume["work"].append(
+        {
+            **resume["work"][1],
+            "position": "Apprentice",
+            "startDate": "1840-01",
+            "endDate": "1841-12",
+        }
+    )
+    return resume
+
+
+@pytest.mark.slow
+def test_page_breaks_accepts_a_company_moved_whole_to_the_next_page(resume) -> None:
+    resume = _company_at_page_foot(resume)
+    assert external.page_budget(resume, replace(POLICY, page_budget=1), CUTS)
+    assert external.page_breaks(resume, POLICY, CUTS) == []
+
+
+@pytest.mark.slow
+def test_page_breaks_reports_a_company_split_that_would_fit_one_page(
+    resume, tmp_path, monkeypatch
+) -> None:
+    """A theme that lets companies straddle pages is caught on the PDF."""
+    theme = tmp_path / "themes" / "classic"
+    shutil.copytree(THEMES_DIR / "classic", theme)
+    with (theme / "style.css").open("a", encoding="utf-8") as css:
+        css.write(".company { break-inside: auto; page-break-inside: auto; }\n")
+    monkeypatch.chdir(tmp_path)
+
+    violations = external.page_breaks(_company_at_page_foot(resume), POLICY, CUTS)
+
+    assert [v.where for v in violations] == ["variant short: Engine Workshop"]
+    assert violations[0].text.startswith("pages 1–2;")
+    assert "break-inside: avoid" in violations[0].fix
+
+
+@pytest.mark.slow
+def test_page_breaks_reports_a_role_taller_than_a_page(resume) -> None:
+    """Too tall to keep whole: the role is reported, its company is not."""
+    resume["work"][0]["highlights"] *= 100
+    (violation,) = external.page_breaks(resume, POLICY, CUTS)
+    assert violation.rule == "page_breaks"
+    assert violation.severity == "hard"
+    assert violation.where == "variant short: Analytical Engines — Lead Engineer"
+    assert violation.text.startswith("role breaks across pages ")
+    assert "x-highlights" in violation.fix
 
 
 @pytest.mark.slow

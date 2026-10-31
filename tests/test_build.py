@@ -7,6 +7,7 @@ they are the only ones that would catch the PDF pipeline breaking.
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 
 import pytest
 from conftest import FIXTURES
@@ -120,7 +121,9 @@ def test_json_build_is_a_valid_json_resume_with_provenance(
 
     monkeypatch.setattr(
         "resume_toolkit.build.build_stamp",
-        lambda: Stamp("2026.01.01+g1234567", "2026-01-01", False),
+        lambda: Stamp(
+            "2026.01.01+1234567", "2026-01-01", False, "2026-01-01 · rev 1234567"
+        ),
     )
     written = build_variant(
         resume,
@@ -133,7 +136,7 @@ def test_json_build_is_a_valid_json_resume_with_provenance(
     assert validate(data) == []
     # A known content stamp is propagated to machine-readable output.
     meta = data.get("meta") or {}
-    assert "version" in meta
+    assert meta["version"] == "2026.01.01+1234567"
     assert "lastModified" in meta
 
 
@@ -188,3 +191,51 @@ def test_pdf_build_produces_an_a4_document_with_extractable_text(
     text = page.extract_text()
     assert resume["basics"]["name"] in text
     assert "�" not in text, "text layer lost characters"
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("variant", ["one-page", "2-page", "full"])
+@pytest.mark.parametrize("dirty", [False, True])
+def test_pdf_repeats_one_footer_with_page_numbers_on_every_page(
+    resume, tmp_path, monkeypatch, variant, dirty
+) -> None:
+    """Each page names the cut, the build and where the latest copy lives, and
+    numbers itself; the text layer reads body first, footer last, once."""
+    pypdf = pytest.importorskip("pypdf")
+    from resume_toolkit.version import Stamp
+
+    label = "2026-01-01 · rev 1234567" + (" (modified)" if dirty else "")
+    monkeypatch.setattr(
+        "resume_toolkit.build.build_stamp",
+        lambda: Stamp(
+            "2026.01.01+1234567" + (".dirty" if dirty else ""),
+            "2026-01-01",
+            dirty,
+            label,
+        ),
+    )
+    resume["work"][0]["highlights"] *= 60
+    try:
+        written = build_variant(
+            resume,
+            replace(get_variant("short", FIXTURES / "variants.toml"), name=variant),
+            formats=("pdf",),
+            out_dir=tmp_path,
+        )
+    except BrowserMissing as exc:
+        pytest.skip(str(exc))
+
+    pages = pypdf.PdfReader(str(written[0].path)).pages
+    assert len(pages) >= 2
+    footer = f"{variant.title()} Version · {label} · latest at example.com/cv"
+    for number, page in enumerate(pages, start=1):
+        lines = page.extract_text().splitlines()
+        assert lines[-1] == f"{footer} · {number} / {len(pages)}"
+        assert sum(footer in line for line in lines) == 1
+        # The canonical address stays clickable on every page.
+        uris = [a.get_object()["/A"].get("/URI") for a in page.get("/Annots") or []]
+        assert "https://example.com/cv/" in uris
+    text = "".join(page.extract_text() for page in pages)
+    # Body text is laid out once: the footer adds no second copy of anything.
+    assert text.count(resume["basics"]["name"]) == 1
+    assert text.count("Example College") == 1

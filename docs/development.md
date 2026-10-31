@@ -88,6 +88,41 @@ The substring must match exactly **one** bullet; the build fails loudly if an ed
 breaks the match, because a rule that silently stopped matching would silently republish the
 bullet everywhere. Like `x-tags`, `x-highlights` is stripped before rendering.
 
+### Per-variant design tokens
+
+A variant may override tokens declared by the selected theme:
+
+```toml
+[one-page]
+include = []
+publish = true
+style = { "--size-base" = "9pt", "--leading" = "1.2", "--section-gap" = "6pt" }
+```
+
+The renderer appends these custom properties after the theme stylesheet, in
+both HTML and the separate PDF footer document. Builds, previews and Chromium
+checks use the same overrides; other variants keep the theme defaults. JSON
+and Markdown are unaffected. Unknown variant keys, incorrect types, non-custom
+property names, unknown theme tokens and unsafe values fail with a configuration
+error. Values must be nonempty strings without `;`, `{`, `}`, `<`, backslashes,
+CSS comments or control characters. Unknown tokens are checked when rendering
+against the selected theme. This validates the declaration boundary, not every
+CSS value grammar; inspect the computed layout after changing tokens.
+
+The classic theme exposes body size, leading, section and entry gaps, heading
+gap/padding, role and summary gaps, highlights and bullet gaps, skills row gap,
+and company, title, meta and footer sizes. Defaults live in `style.css`.
+Page margins remain fixed at 15 mm vertically and 14 mm horizontally; variant
+style cannot change them. Thus `print_content_width` and `print_content_height`
+keep their existing meaning. Custom themes own their geometry and check policy.
+
+For compact cuts, keep body text at least **9pt**, dates/meta/footer at least
+**7.5pt**, body line-height at least **1.2**, and side margins at least **12 mm**.
+Keep the 15 mm bottom margin for the running footer. These are authoring floors,
+not automatic checks. The footer defaults to 7.5pt; leave `--size-footer` unset
+so every cut prints the same footer. Leave at least one body line spare,
+measure the PDF, and review the rendered result.
+
 ## What gets published
 
 The published JSON is not a copy of `resume.json`: it is the *variant-filtered* document — the same
@@ -96,10 +131,38 @@ stripped and build provenance stamped into `meta`. A parser and a reader can nev
 what the CV says. The same goes for the Markdown, which exists for the places styled output cannot
 go: ATS web forms, plain-text email, LLM prompts.
 
+The first published variant in `variants.toml` is the primary cut: the index
+shows it first and most prominently, and the canonical `resume.json` alias and
+`llms.txt` point at it. Further published variants follow it on the index as
+alternatives, in file order, with the same HTML, PDF, JSON and Markdown actions.
+Reorder `variants.toml` to change the primary cut.
+
 Besides variant artifacts, the site includes `index.html`, a canonical `resume.json`
 alias, `llms.txt`, `404.html`, `robots.txt` and a sitemap when `meta.canonical` is set.
 The source link and build provenance come from the content repository, not the
 installed toolkit. A directory without git history has no provenance stamp.
+Readers see the stamp as `2026-10-31 · rev 39140c4` in the PDF footer, the
+screen colophon and the Markdown colophon; machines read `meta.version` as
+CalVer with the hash as SemVer build metadata, `2026.10.31+39140c4`. A build
+with uncommitted edits to `resume.json` is dated today and reads
+`2026-10-31 · rev 39140c4 (modified)` and `2026.10.31+39140c4.dirty`.
+
+## PDF pages
+
+The classic theme keeps every company on one page; a company taller than a
+page breaks between roles, never inside one. The `page_breaks` check verifies
+this on the PDF. Every PDF page carries the same footer, on one line across
+the page width: four fields at equal gaps from margin to margin, a `·` centred
+in each gap, the variant label (`One-Page Version`), the build stamp
+(`2026-10-31 · rev 39140c4`), the canonical address (a link) and the page
+number (`1 / 2`). The screen HTML closes with the same row, same type and
+colour, minus the page number. Chromium
+draws it from the theme's `footer.html.j2` inside the `@page` bottom margin, so
+it cannot overlap content or change pagination. The footer is a Chromium
+footer template, not a CSS margin box: margin boxes would put the footer first
+in the PDF text layer, glued to the page number, and could not hold a link.
+The screen HTML has no page numbers and closes with a single colophon, which
+print hides. A theme without `footer.html.j2` prints no footer.
 
 ## Asset packaging
 

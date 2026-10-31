@@ -20,7 +20,7 @@ from .common import (
     looks_present,
     match_context,
 )
-from .config import CheckConfig, published_variant
+from .config import CheckConfig, checked_variants
 from .language import SENTENCE_END, UNIT_WITHOUT_SPACE, US_SPELLING_STEMS
 
 
@@ -177,21 +177,30 @@ def verb_led(
 def quantified(
     resume: dict, config: CheckConfig, variants: dict[str, Variant]
 ) -> list[Violation]:
-    """Every work entry on the published cut carries at least one figure."""
-    cut = apply_variant(resume, published_variant(config, variants))
-    violations = [
-        Violation(
-            f"$.work[{i}]  ({entry_label(entry)})",
-            entry.get("summary", "(no summary)"),
-            "add at least one concrete figure (scale, spec, cost, "
-            "accuracy…) or tag the entry out of the published cut",
-        )
-        for i, entry in enumerate(cut.get("work", []))
-        if not any(
-            c.isdigit()
-            for c in entry.get("summary", "") + " ".join(entry.get("highlights", []))
-        )
-    ]
+    """Every work entry on a published cut carries at least one figure.
+
+    Each source entry is judged once per cut, as that cut renders it (bullets
+    filtered by x-highlights), and reported once with the cuts it fails in.
+    """
+    cuts = checked_variants("quantified", config, variants)
+    violations = []
+    for i, entry in enumerate(resume.get("work", [])):
+        failing = []
+        for variant in cuts:
+            for shown in apply_variant({"work": [entry]}, variant).get("work", []):
+                text = shown.get("summary", "") + " ".join(shown.get("highlights", []))
+                if not any(c.isdigit() for c in text):
+                    failing.append(variant.name)
+        if failing:
+            violations.append(
+                Violation(
+                    f"$.work[{i}]  ({entry_label(entry)}; in {', '.join(failing)})",
+                    entry.get("summary", "(no summary)"),
+                    "add at least one concrete figure (scale, spec, cost, "
+                    "accuracy…), keep a quantified bullet in the cut, or tag the "
+                    "entry out of it",
+                )
+            )
     return finish("quantified", violations)
 
 

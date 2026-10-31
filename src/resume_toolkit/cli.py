@@ -52,7 +52,12 @@ def validate(
 @app.command(name="variants")
 def list_variants() -> None:
     """List the variants defined in variants.toml."""
-    for variant in load_variants().values():
+    try:
+        variants = load_variants()
+    except ValueError as exc:
+        typer.echo(f"{err}: {exc}")
+        raise typer.Exit(2) from None
+    for variant in variants.values():
         tags = (
             "everything"
             if variant.includes_everything
@@ -89,7 +94,7 @@ def build(
 
     try:
         targets = [get_variant(variant)] if variant else list(load_variants().values())
-    except UnknownVariant as exc:
+    except (UnknownVariant, ValueError) as exc:
         typer.echo(f"{err}: {exc}")
         raise typer.Exit(2) from None
 
@@ -104,7 +109,7 @@ def build(
             ):
                 size = artifact.path.stat().st_size
                 typer.echo(f"{ok}: {artifact.path} ({size / 1024:.0f} KB)")
-    except (UnknownTheme, BrowserMissing) as exc:
+    except (UnknownTheme, BrowserMissing, ValueError) as exc:
         typer.echo(f"{err}: {exc}")
         raise typer.Exit(2) from None
 
@@ -125,7 +130,7 @@ def site(
 
     try:
         written = build_site(resume, theme=theme, out_dir=out)
-    except (UnknownTheme, BrowserMissing) as exc:
+    except (UnknownTheme, BrowserMissing, ValueError) as exc:
         typer.echo(f"{err}: {exc}")
         raise typer.Exit(2) from None
 
@@ -145,7 +150,7 @@ def serve(
 
     try:
         target = get_variant(variant)
-    except UnknownVariant as exc:
+    except (UnknownVariant, ValueError) as exc:
         typer.echo(f"{err}: {exc}")
         raise typer.Exit(2) from None
 

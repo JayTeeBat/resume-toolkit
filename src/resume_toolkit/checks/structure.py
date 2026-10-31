@@ -11,13 +11,14 @@ from ..variants import (
     TAGGABLE_SECTIONS,
     WILDCARD,
     Variant,
+    apply_variant,
 )
 from .common import (
     Violation,
     entry_label,
     finish,
 )
-from .config import CheckConfig, date_pattern
+from .config import CheckConfig, checked_variants, date_pattern
 
 DATE_FIELDS = {"startDate", "endDate", "releaseDate", "date"}
 
@@ -305,3 +306,83 @@ def dates(
         if not entry.get("startDate")
     ]
     return finish("dates", violations)
+
+
+def required_sections(
+    resume: dict, config: CheckConfig, variants: dict[str, Variant]
+) -> list[Violation]:
+    violations = []
+    for variant in checked_variants("required_sections", config, variants):
+        filtered = apply_variant(resume, variant)
+        sections = dict.fromkeys(
+            config.required_sections.get("*", [])
+            + config.required_sections.get(variant.name, [])
+        )
+        for section in sections:
+            if filtered.get(section):
+                continue
+            owners = " and ".join(
+                f"required_sections.{label}"
+                for name, label in (("*", '"*"'), (variant.name, variant.name))
+                if section in config.required_sections.get(name, [])
+            )
+            violations.append(
+                Violation(
+                    f"{variant.name}: section {section!r}",
+                    "empty after filtering",
+                    "remove the x-tags that drop it, or supply non-empty content, "
+                    f"or remove it from {owners}",
+                )
+            )
+    return finish("required_sections", violations)
+
+
+def role_highlights(
+    resume: dict, config: CheckConfig, variants: dict[str, Variant]
+) -> list[Violation]:
+    violations = []
+    for variant in checked_variants("role_highlights", config, variants):
+        policy = config.role_highlights.get(variant.name)
+        if policy is None:
+            continue
+        minimum = int(policy["min"])
+        since = str(policy.get("since", ""))
+        for i, entry in enumerate(resume.get("work", [])):
+            if since and month_index(entry["startDate"]) < month_index(since):
+                continue
+            kept = apply_variant({"work": [entry]}, variant).get("work", [])
+            where = f"$.work[{i}] ({entry_label(entry)}; in {variant.name})"
+            if not kept:
+                if since:
+                    violations.append(
+                        Violation(
+                            where + ".x-tags",
+                            str(entry.get(TAG_KEY)),
+                            "remove these x-tags so this required role "
+                            "survives filtering",
+                        )
+                    )
+                continue
+            count = sum(bool(h.strip()) for h in kept[0].get("highlights", []))
+            if count >= minimum:
+                continue
+            dropped = [
+                f'$.work[{i}].x-highlights["{pattern}"]'
+                for pattern, tags in entry.get(HIGHLIGHT_TAG_KEY, {}).items()
+                if tags
+                and not variant.includes_everything
+                and not set(tags) & variant.include
+            ]
+            fix = (
+                "remove or change the tags in " + ", ".join(dropped)
+                if dropped
+                else f"add owner-confirmed bullets to $.work[{i}].highlights"
+            )
+            violations.append(
+                Violation(
+                    where,
+                    f"{count} nonblank highlights after filtering; minimum {minimum}",
+                    fix + f" so at least {minimum} nonblank highlights survive",
+                )
+            )
+    return finish("role_highlights", violations)

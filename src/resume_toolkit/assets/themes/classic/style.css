@@ -35,6 +35,17 @@
   --section-gap:  7pt;
 
   --entry-gap:    5.5pt;
+  --size-company: 10.6pt;
+  --size-title: 10.2pt;
+  --size-meta: 8.8pt;
+  --heading-gap: 5pt;
+  --heading-padding: 2.5pt;
+  --role-gap: 3.5pt;
+  --summary-gap: 2pt;
+  --highlights-gap: 2.5pt;
+  --bullet-gap: 1.2pt;
+  --skills-gap: 2.5pt;
+  --size-footer: 7.5pt;
 }
 
 /* --- Page geometry -------------------------------------------------------
@@ -94,7 +105,9 @@ a {
   padding: 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 2pt 10pt;
+  /* 7pt either side of a separator, not 10pt: full profile URLs
+     (linkedin.com/in/…) must still share one line at A4 print width. */
+  gap: 2pt 7pt;
   font-size: 8.6pt;
   color: var(--ink-soft);
 }
@@ -102,7 +115,7 @@ a {
 /* Bullet separators between contact items, but not before the first. */
 .contact li + li::before {
   content: '·';
-  margin-right: 10pt;
+  margin-right: 7pt;
   color: var(--ink-faint);
 }
 
@@ -113,14 +126,14 @@ a {
 .section { margin-bottom: var(--section-gap); }
 
 .section h2 {
-  margin: 0 0 5pt;
+  margin: 0 0 var(--heading-gap);
   font-size: 9.4pt;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.11em;
   color: var(--accent);
   border-bottom: 0.5pt solid var(--rule);
-  padding-bottom: 2.5pt;
+  padding-bottom: var(--heading-padding);
   /* Never leave a heading stranded at the foot of a page. */
   break-after: avoid;
   page-break-after: avoid;
@@ -144,6 +157,11 @@ a {
 
 .company {
   margin-bottom: var(--entry-gap);
+  /* A company never straddles a page break. One taller than a page breaks
+     anyway, and then only between roles, which .entry keeps whole. The
+     page_breaks check verifies both on the printed PDF. */
+  break-inside: avoid;
+  page-break-inside: avoid;
 }
 
 .company:last-child { margin-bottom: 0; }
@@ -155,7 +173,7 @@ a {
 
 .company-name {
   margin: 0;
-  font-size: 10.6pt;
+  font-size: var(--size-company);
   font-weight: 700;
   color: var(--accent);
 }
@@ -163,7 +181,7 @@ a {
 .company-meta { margin-bottom: 2pt; }
 
 .role {
-  margin-top: 3.5pt;
+  margin-top: var(--role-gap);
   margin-left: 5pt;
   padding-left: 8pt;
   border-left: 1pt solid var(--rule);
@@ -171,7 +189,7 @@ a {
 
 .role-title {
   margin: 0;
-  font-size: 10.2pt;
+  font-size: var(--size-title);
   font-weight: 600;
   color: var(--ink);
 }
@@ -185,7 +203,7 @@ a {
 
 .entry-title {
   margin: 0;
-  font-size: 10.2pt;
+  font-size: var(--size-title);
   font-weight: 600;
   color: var(--ink);
 }
@@ -205,23 +223,23 @@ a {
 
 .entry-meta {
   margin: 0.5pt 0 0;
-  font-size: 8.8pt;
+  font-size: var(--size-meta);
   font-style: italic;
   color: var(--ink-faint);
 }
 
 .entry-summary {
-  margin: 2pt 0 0;
+  margin: var(--summary-gap) 0 0;
   color: var(--ink-soft);
 }
 
 .highlights {
-  margin: 2.5pt 0 0;
+  margin: var(--highlights-gap) 0 0;
   padding-left: 11pt;
 }
 
 .highlights li {
-  margin-bottom: 1.2pt;
+  margin-bottom: var(--bullet-gap);
   padding-left: 1pt;
 }
 
@@ -230,7 +248,7 @@ a {
 }
 
 .keywords {
-  margin: 2.5pt 0 0;
+  margin: var(--highlights-gap) 0 0;
   font-size: 8.6pt;
   color: var(--ink-faint);
 }
@@ -241,7 +259,7 @@ a {
   margin: 0;
   display: grid;
   grid-template-columns: max-content 1fr;
-  gap: 2.5pt 10pt;
+  gap: var(--skills-gap) 10pt;
 }
 
 /* Each .skill is a display:contents wrapper so its dt/dd participate directly
@@ -273,30 +291,50 @@ a {
 
 /* --- Colophon ------------------------------------------------------------
    Provenance, deliberately quiet: it identifies the file without competing
-   with the CV. It closes the document rather than repeating per page, because
-   a running footer would need Chromium's own header/footer templates, and
-   those require reserved page margins that would fight the @page rule above. */
+   with the CV. On screen it closes the document once. In print it is hidden
+   and .running-footer (footer.html.j2) repeats the same row, plus a page
+   number, on every page: Chromium draws that footer inside the @page bottom
+   margin, so it never overlaps content or changes the pagination.
+
+   Both are one .footer-row: fields and their separators spread from margin
+   to margin with equal gaps, so the screen colophon and the PDF footer have
+   the same shape, type and colour. */
+.footer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-family: var(--font);
+  font-size: var(--size-footer);
+  line-height: 1.35;
+  white-space: nowrap;
+  color: var(--ink-faint);
+  /* Chromium prints footer templates in economy colour unless told not to,
+     which darkens --ink-faint to near-black. */
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.footer-row a {
+  color: inherit;
+  border-bottom: none;
+}
+
 .colophon {
   margin-top: var(--section-gap);
   padding-top: 4pt;
   border-top: 0.4pt solid var(--rule);
-  font-size: 7.2pt;
-  color: var(--ink-faint);
   break-inside: avoid;
   page-break-inside: avoid;
 }
 
-/* Separators in CSS, not markup: any piece can be absent without leaving a
-   dangling bullet behind it. */
-.colophon > * + *::before {
-  content: ' · ';
-  color: var(--rule);
+/* Chromium lays the footer template out in the bottom page margin at full
+   page width; the side padding repeats the @page side margins. */
+.running-footer {
+  width: 100%;
+  padding: 0 14mm;
 }
 
-.colophon a {
-  color: inherit;
-  border-bottom: none;
-}
+.folio { font-variant-numeric: tabular-nums; }
 
 /* --- Screen-only affordances --------------------------------------------
    Give the browser preview a paper-on-desk look. Chromium applies @page in
@@ -337,6 +375,14 @@ a {
 
   .contact li + li::before { content: none; }
 
+  /* Too narrow to spread: the colophon wraps as a plain dotted line. */
+  .colophon {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 0 4pt;
+    white-space: normal;
+  }
+
   .skills {
     grid-template-columns: 1fr;
     gap: 1pt;
@@ -360,4 +406,5 @@ a {
 
 @media print {
   a { border-bottom: none; }
+  .resume > .colophon { display: none; }
 }

@@ -1,5 +1,7 @@
 # Resume Toolkit
 
+See the [standards register](docs/standards.md) for scope and enforcement.
+
 ## Overview
 
 Turn a JSON Resume into styled HTML, PDF, JSON, Markdown and a static Pages site.

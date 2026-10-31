@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import subprocess
 
+import pytest
+
 from resume_toolkit import version as ver
 from resume_toolkit.version import Stamp, build_stamp
 
@@ -18,15 +20,17 @@ def _fake_git(monkeypatch, mapping: dict[str, str | None]) -> None:
     monkeypatch.setattr(ver, "_git", lambda *args: mapping.get(args[0]))
 
 
-def test_stamp_is_calver_plus_commit(monkeypatch) -> None:
-    _fake_git(
-        monkeypatch, {"log": "2026-07-16", "rev-parse": "942700c", "status": None}
-    )
+@pytest.mark.parametrize("sha", ["942700c", "942700c" + "0" * 33])
+def test_stamp_is_calver_plus_commit(monkeypatch, sha) -> None:
+    _fake_git(monkeypatch, {"log": "2026-07-16", "rev-parse": sha, "status": None})
 
     stamp = build_stamp()
 
     assert stamp == Stamp(
-        version="2026.07.16+g942700c", modified="2026-07-16", dirty=False
+        version="2026.07.16+942700c",
+        modified="2026-07-16",
+        dirty=False,
+        label="2026-07-16 · rev 942700c",
     )
 
 
@@ -48,8 +52,8 @@ def test_uncommitted_edits_are_marked_and_dated_today(monkeypatch) -> None:
     assert stamp is not None
     assert stamp.dirty is True
     assert stamp.modified == date.today().isoformat()
-    assert stamp.version.endswith("-dirty")
-    assert "g942700c" in stamp.version
+    assert stamp.version == f"{date.today():%Y.%m.%d}+942700c.dirty"
+    assert stamp.label == f"{date.today().isoformat()} · rev 942700c (modified)"
 
 
 def test_no_stamp_rather_than_a_fabricated_one(monkeypatch) -> None:
@@ -102,5 +106,6 @@ def test_stamp_against_a_content_repository(tmp_path, monkeypatch) -> None:
     stamp = build_stamp()
     assert stamp is not None
     assert stamp.version.startswith("20")
-    assert "+g" in stamp.version
+    assert "+g" not in stamp.version
+    assert len(stamp.version.split("+")[1]) == 7
     assert not stamp.dirty

@@ -1,4 +1,4 @@
-"""Built-in English linguistic data and SI unit symbols."""
+"""Built-in English linguistic data and unit symbols (SI Brochure, 9th edition)."""
 
 import re
 
@@ -20,15 +20,18 @@ US_SPELLING_STEMS = (
     "visualiz",
 )
 
+#: Edition the unit_spacing rule follows; docs/standards.md must cite the same.
+SI_BROCHURE = "SI Brochure, 9th edition (2019)"
+
+# SI Brochure §5.4.3: a space always separates the number from the unit
+# symbol, °C included; §5.4.7: the same for %. Only symbols listed here are
+# checked, so a bare number never trips the rule.
 UNIT_SYMBOLS = (
-    "%",
+    # SI units, with their prefixed forms.
     "°C",
     "A",
-    "Ah",
-    "bar",
     "cm",
     "g",
-    "h",
     "Hz",
     "kA",
     "kg",
@@ -37,27 +40,35 @@ UNIT_SYMBOLS = (
     "kPa",
     "kV",
     "kW",
-    "kWh",
-    "L",
     "m",
     "mA",
-    "mAh",
     "MHz",
-    "min",
-    "mL",
     "mm",
     "MPa",
     "ms",
     "mV",
     "MW",
-    "MWh",
     "N",
-    "Nm",
     "Pa",
-    "rpm",
     "s",
     "V",
     "W",
+    # Non-SI units accepted for use with the SI (Brochure Table 8).
+    "h",
+    "L",
+    "min",
+    "mL",
+    # The percent sign (§5.4.7).
+    "%",
+    # Non-SI units common in battery engineering, spaced by the same
+    # convention. N m is left out: SI writes it with a space or a dot, never
+    # "Nm", so a rule that accepted "20 Nm" would endorse the wrong form.
+    "Ah",
+    "bar",
+    "kWh",
+    "mAh",
+    "MWh",
+    "rpm",
     "Wh",
 )
 

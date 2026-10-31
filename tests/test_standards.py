@@ -3,6 +3,8 @@
 import re
 from pathlib import Path
 
+from resume_toolkit.checks.language import SI_BROCHURE, UNIT_SYMBOLS
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -32,5 +34,8 @@ def test_standards_pins() -> None:
     assert all(pin in kit_row for pin in pins)
     assert 'profile = "python-single"' in (ROOT / "pyproject.toml").read_text()
     assert "python-single" in kit_row
+    si_row = next(line for line in register.splitlines() if "SI Brochure" in line)
+    assert SI_BROCHURE in si_row
+    assert "Nm" not in UNIT_SYMBOLS
     assert "sitemap/0.9" in (ROOT / "src/resume_toolkit/site.py").read_text()
     assert "| 0.9 |" in register

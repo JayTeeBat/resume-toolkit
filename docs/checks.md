@@ -24,7 +24,7 @@ advice within the hard bounds. Minimal policy: an empty TOML file.
 | `spelling` | `spelling = "none"`; `"en-GB"` selects built-in US spelling stems |
 | `proper_names` | `proper_names = {}`; mapping from incorrect to correct casing |
 | `typography` | No double/edge spaces, spaced hyphens, ASCII multiplication or trailing currency symbols |
-| `unit_spacing` | Built-in SI symbols require whitespace after numbers |
+| `unit_spacing` | Built-in unit symbols require whitespace after numbers (`10 kWh`, `±3 %`, `25 °C`), per the [SI Brochure, 9th edition (2019)](https://www.bipm.org/en/publications/si-brochure) §5.4.3 and §5.4.7; the list in `checks/language.py` is SI, accepted-for-use and common battery units, curated rather than exhaustive |
 | `tense` | Built-in English verb lists; current role present, ended role past |
 | `verb_led` | Highlights start with a recognized present/past verb or an `-ed` word |
 | `quantified` | At least one digit in each published work entry's summary/highlights |

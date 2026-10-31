@@ -86,7 +86,6 @@
     padding: 1.15rem 1.25rem;
   }
   .card h2, .card h3 { margin: 0; }
-  .card p { margin: .3rem 0 0; color: var(--soft); font-size: .9rem; }
   /* The primary cut leads: accent border, larger heading. */
   .primary-card {
     margin-top: 2.25rem;
@@ -162,10 +161,11 @@
   {%- endmacro %}
 
   {# The first published variant in variants.toml is the primary cut: it
-     leads, plainly, and is the one /resume.json and llms.txt point at. A lone
-     cut shows no name and no internal description, just the actions. Any
-     further published cuts follow as quieter alternatives, in file order,
-     with the same four actions. #}
+     leads, plainly, and is the one /resume.json and llms.txt point at. Cards
+     carry the version name and its actions only: variant descriptions are
+     notes for the CV's author and for llms.txt, not copy for visitors. A lone
+     cut shows no name, just the actions. Any further published cuts follow
+     as quieter alternatives, in file order, with the same four actions. #}
   {% set primary = cards[0] %}
   {% if cards | length == 1 %}
     <div class="actions solo">
@@ -174,7 +174,6 @@
   {% else %}
     <section class="card primary-card">
       <h2>{{ primary.name | title }} Version</h2>
-      {% if primary.description %}<p>{{ primary.description }}</p>{% endif %}
       <div class="actions">
         {{ actions(primary) }}
       </div>
@@ -184,7 +183,6 @@
       {% for c in cards[1:] %}
       <section class="card alternative">
         <h3>{{ c.name | title }} Version</h3>
-        {% if c.description %}<p>{{ c.description }}</p>{% endif %}
         <div class="actions">
           {{ actions(c) }}
         </div>
@@ -193,11 +191,7 @@
     </section>
   {% endif %}
 
-  <footer>
-    Built from
-    {% if source_url %}<a href="{{ source_url }}">resume.json</a>{% else %}resume.json{% endif %}
-    · updated {{ generated }}
-  </footer>
+  <footer>Updated {{ generated }}</footer>
 
 </main>
 </body>

@@ -8,9 +8,6 @@ directory that GitHub Pages can serve at a stable public URL instead.
 from __future__ import annotations
 
 import json
-import os
-import re
-import subprocess
 from datetime import date
 from pathlib import Path
 
@@ -18,7 +15,7 @@ from jinja2 import Environment, FileSystemLoader
 from markupsafe import Markup
 
 from .build import Artifact, build_variant
-from .paths import DIST_DIR, REPO_ROOT, SITE_DIR
+from .paths import DIST_DIR, SITE_DIR
 from .render import location, urlhost
 from .variants import Variant, load_variants
 from .version import build_stamp
@@ -30,33 +27,6 @@ NOT_FOUND_TEMPLATE = "404.html.j2"
 
 def _human_size(num_bytes: int) -> str:
     return f"{num_bytes / 1024:.0f} KB"
-
-
-def _source_url() -> str | None:
-    """Best-effort link back to resume.json on GitHub, or None if not derivable.
-
-    Actions sets GITHUB_REPOSITORY, so CI needs no guessing. Locally we read the
-    origin remote, which also copes with SSH host aliases like
-    `github-perso:owner/repo.git`.
-    """
-    repo = os.environ.get("GITHUB_REPOSITORY")
-    if not repo:
-        try:
-            remote = subprocess.run(
-                ["git", "remote", "get-url", "origin"],
-                cwd=REPO_ROOT,
-                capture_output=True,
-                text=True,
-                timeout=5,
-                check=True,
-            ).stdout.strip()
-        except (OSError, subprocess.SubprocessError):
-            return None
-        match = re.search(r"[:/]([^/:]+/[^/]+?)(?:\.git)?$", remote)
-        if not match:
-            return None
-        repo = match.group(1)
-    return f"https://github.com/{repo}/blob/main/resume.json"
 
 
 def _card(variant: Variant, out_dir: Path) -> dict:
@@ -124,7 +94,6 @@ def _render_index(resume: dict, cards: list[dict]) -> str:
         .render(
             resume=resume,
             cards=cards,
-            source_url=_source_url(),
             json_ld=_json_ld(resume),
             generated=date.today().isoformat(),
         )

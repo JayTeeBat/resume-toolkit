@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+## 0.2.1 - 2026-10-31
+
+### Changed
+
+- Landing-page cards show the version name and its four actions only; variant
+  descriptions no longer appear there. They remain in `llms.txt` and
+  `resume variants`.
+- The landing-page footer shows only the update date (`Updated 2026-10-31`);
+  the "Built from resume.json" source link is gone.
+
 ## 0.2.0 - 2026-10-31
 
 ### Added

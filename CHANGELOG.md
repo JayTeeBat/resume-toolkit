@@ -14,9 +14,9 @@
   PDF, preview and layout checks, with configuration validation and documented
   readability floors. Classic spacing and small-text tokens preserve defaults.
 
-- Running PDF footer on every page, one line in three zones across the page:
-  variant label and build stamp left, clickable canonical address centred,
-  page number right, from the theme's `footer.html.j2` (ADR 0005). The footer
+- Running PDF footer on every page, one line of four fields spread at equal
+  gaps across the page: variant label, build stamp, clickable canonical
+  address and page number, from the theme's `footer.html.j2` (ADR 0005). The footer
   is 7.5pt by default and identical on every cut.
 - `Stamp.label`, the human-readable build stamp (`2026-10-31 · rev 39140c4`,
   `… (modified)` for uncommitted edits), shown in the PDF footer and the

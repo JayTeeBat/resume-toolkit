@@ -28,10 +28,9 @@ with the canonical address clickable on every page, and leaves the content
 area and so the pagination unchanged. Print hides the in-flow colophon, so its
 text appears once per page.
 
-The footer is one line in three zones across the page width: variant label and
-build stamp left, the canonical address centred on the page (not between its
-neighbours), the page number right. It reads
-`One-Page Version · 2026-10-31 · rev 39140c4 … latest at example.com/cv … 1 / 2`,
+The footer is one line of four fields spread at equal gaps across the page
+width: variant label, build stamp, canonical address, page number. It reads
+`One-Page Version … 2026-10-31 · rev 39140c4 … latest at example.com/cv … 1 / 2`,
 the same layout, wording and 7.5pt size on every cut; only the variant label
 and the page count differ. The stamp shown to readers is `Stamp.label`
 (`YYYY-MM-DD · rev <7-char hash>`, with `(modified)` appended for uncommitted edits);

@@ -227,7 +227,7 @@ def test_pdf_repeats_one_footer_with_page_numbers_on_every_page(
 
     pages = pypdf.PdfReader(str(written[0].path)).pages
     assert len(pages) >= 2
-    footer = f"{variant.title()} Version · {label} latest at example.com/cv"
+    footer = f"{variant.title()} Version {label} latest at example.com/cv"
     for number, page in enumerate(pages, start=1):
         lines = page.extract_text().splitlines()
         assert lines[-1] == f"{footer} {number} / {len(pages)}"

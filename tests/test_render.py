@@ -370,10 +370,12 @@ def test_print_footer_repeats_the_colophon_with_page_placeholders() -> None:
     )
 
     assert footer is not None
-    assert footer.index('class="colophon-items"') < footer.index(
-        'class="footer-latest"'
+    assert (
+        footer.index("2-Page Version")
+        < footer.index("rev 942700c")
+        < footer.index("example.com/cv</a>")
+        < footer.index('class="folio"')
     )
-    assert footer.index('class="footer-latest"') < footer.index('class="folio"')
     assert "2-Page Version" in footer
     assert "2026-07-16 · rev 942700c" in footer
     assert '<a href="https://example.com/cv/">example.com/cv</a>' in footer

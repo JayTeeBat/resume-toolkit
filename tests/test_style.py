@@ -1,5 +1,6 @@
 """Variant design tokens are validated and shared by exports and checks."""
 
+import itertools
 from dataclasses import replace
 from pathlib import Path
 
@@ -134,7 +135,7 @@ def test_footer_geometry_is_identical_across_body_styles(
     resume, tmp_path, dirty
 ) -> None:
     """Body tokens never reach the footer: every cut gets one 7.5pt line whose
-    three zones do not touch, with the address centred on the page."""
+    four fields sit at equal gaps from margin to margin."""
     from resume_toolkit.version import Stamp
 
     stamp = Stamp(
@@ -169,16 +170,17 @@ def test_footer_geometry_is_identical_across_body_styles(
                             leading: s.lineHeight, wrap: s.whiteSpace};
                 })"""
             )
-            left, centre, right = zones
-            assert left["right"] < centre["left"]
-            assert centre["right"] < right["left"]
-            # A4 at 96 dpi: 794 px wide, centred at 397 px.
-            middle = (centre["left"] + centre["right"]) / 2
-            assert middle == pytest.approx(397, abs=0.02)
+            assert len(zones) == 4
+            gaps = [b["left"] - a["right"] for a, b in itertools.pairwise(zones)]
+            assert min(gaps) > 0
+            assert max(gaps) - min(gaps) == pytest.approx(0, abs=0.02)
+            # A4 at 96 dpi is 794 px wide; 14 mm side padding is ~52.9 px.
+            assert zones[0]["left"] == pytest.approx(52.9, abs=0.1)
+            assert zones[-1]["right"] == pytest.approx(794 - 52.9, abs=0.1)
             assert {z["size"] for z in zones} == {"10px"}
             assert {z["leading"] for z in zones} == {"13.5px"}
             assert {z["wrap"] for z in zones} == {"nowrap"}
             assert len({z["top"] for z in zones}) == 1
-            geometries.append((centre, right))
+            geometries.append(zones[-1])
             page.close()
     assert geometries[0] == geometries[1] == geometries[2]

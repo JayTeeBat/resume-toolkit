@@ -307,10 +307,8 @@ a {
 
 /* Separators in CSS, not markup: any piece can be absent without leaving a
    dangling bullet behind it. */
-.colophon > * + *::before,
-.colophon-items > * + *::before {
+.colophon > * + *::before {
   content: ' · ';
-  color: var(--rule);
 }
 
 .colophon a,
@@ -320,10 +318,12 @@ a {
 }
 
 /* Chromium lays the footer template out in the bottom page margin at full
-   page width; the side padding repeats the @page side margins. */
+   page width; the side padding repeats the @page side margins. Its fields
+   spread with equal gaps between them, so the width itself separates them
+   and no dots are needed. */
 .running-footer {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  display: flex;
+  justify-content: space-between;
   align-items: baseline;
   width: 100%;
   padding: 0 14mm;
@@ -334,12 +334,7 @@ a {
   color: var(--ink-faint);
 }
 
-.running-footer .colophon-items { justify-self: start; }
-.footer-latest { justify-self: center; }
-.folio {
-  justify-self: end;
-  font-variant-numeric: tabular-nums;
-}
+.folio { font-variant-numeric: tabular-nums; }
 
 /* --- Screen-only affordances --------------------------------------------
    Give the browser preview a paper-on-desk look. Chromium applies @page in

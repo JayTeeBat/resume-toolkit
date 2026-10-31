@@ -6,6 +6,10 @@
 #}
 {% macro colophon_items(variant, stamp, canonical) %}
 {% if variant %}<span>{{ variant | title }} Version</span>{% endif %}
-{% if stamp %}<span>{{ stamp.version }}</span>{% endif %}
+{% if stamp %}<span>{{ stamp.label }}</span>{% endif %}
+{{ latest_link(canonical) }}
+{% endmacro %}
+
+{% macro latest_link(canonical) %}
 {% if canonical %}<span>latest at <a href="{{ canonical }}">{{ canonical | urlhost }}</a></span>{% endif %}
 {% endmacro %}

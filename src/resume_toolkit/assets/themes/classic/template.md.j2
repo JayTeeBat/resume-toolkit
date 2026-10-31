@@ -160,7 +160,7 @@
 
 {{ [
      ((variant | title) ~ ' Version') if variant else None,
-     stamp.version if stamp else None,
+     stamp.label if stamp else None,
      ('latest at ' ~ canonical) if canonical else None,
    ] | select | join(' · ') }}
 {% endif %}

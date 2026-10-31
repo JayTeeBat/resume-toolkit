@@ -127,11 +127,16 @@ def test_colophon_identifies_the_cut_and_the_build() -> None:
     html = render_html(
         {"basics": {"name": "Ada"}, "meta": {"canonical": "https://example.com/cv/"}},
         variant="acme",
-        stamp=Stamp(version="2026.07.16+g942700c", modified="2026-07-16", dirty=False),
+        stamp=Stamp(
+            version="2026.07.16+942700c",
+            modified="2026-07-16",
+            dirty=False,
+            label="2026-07-16 · rev 942700c",
+        ),
     )
 
     assert "Acme Version" in html
-    assert "2026.07.16+g942700c" in html
+    assert "2026-07-16 · rev 942700c" in html
     assert 'href="https://example.com/cv/"' in html
 
 
@@ -297,11 +302,16 @@ def test_markdown_colophon_identifies_the_cut_and_the_build() -> None:
     md = render_markdown(
         {"basics": {"name": "Ada"}, "meta": {"source": "https://github.com/ada/cv"}},
         variant="acme",
-        stamp=Stamp(version="2026.07.16+g942700c", modified="2026-07-16", dirty=False),
+        stamp=Stamp(
+            version="2026.07.16+942700c",
+            modified="2026-07-16",
+            dirty=False,
+            label="2026-07-16 · rev 942700c",
+        ),
     )
 
     assert "Acme Version" in md
-    assert "2026.07.16+g942700c" in md
+    assert "2026-07-16 · rev 942700c" in md
     assert "github.com/ada/cv" not in md
 
 
@@ -351,12 +361,21 @@ def test_print_footer_repeats_the_colophon_with_page_placeholders() -> None:
     footer = render_print_footer(
         {"meta": {"canonical": "https://example.com/cv/"}},
         variant="2-page",
-        stamp=Stamp(version="2026.07.16+g942700c", modified="2026-07-16", dirty=False),
+        stamp=Stamp(
+            version="2026.07.16+942700c",
+            modified="2026-07-16",
+            dirty=False,
+            label="2026-07-16 · rev 942700c",
+        ),
     )
 
     assert footer is not None
+    assert footer.index('class="colophon-items"') < footer.index(
+        'class="footer-latest"'
+    )
+    assert footer.index('class="footer-latest"') < footer.index('class="folio"')
     assert "2-Page Version" in footer
-    assert "2026.07.16+g942700c" in footer
+    assert "2026-07-16 · rev 942700c" in footer
     assert '<a href="https://example.com/cv/">example.com/cv</a>' in footer
     # Chromium fills these two spans in on each page.
     assert '<span class="pageNumber"></span> / <span class="totalPages"></span>' in (

@@ -341,3 +341,52 @@ def test_single_published_cut_has_no_version_label(resume, tmp_path, monkeypatch
     assert (tmp_path / "resume.json").read_bytes() == (
         tmp_path / "resume-2-page.json"
     ).read_bytes()
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("omitted", ["md", "json", "pdf", "html"])
+def test_site_omits_unselected_formats(resume, tmp_path, monkeypatch, omitted):
+    formats = tuple(fmt for fmt in ("pdf", "html", "json", "md") if fmt != omitted)
+    cut = Variant("short", "Public cut", frozenset(), publish=True, formats=formats)
+    monkeypatch.setattr(site_mod, "load_variants", lambda: {cut.name: cut})
+    stale = (
+        pdf_filename(resume["basics"]["name"], "short", "short")
+        if omitted == "pdf"
+        else f"resume-short.{omitted}"
+    )
+    (tmp_path / stale).write_text("previous build")
+    (tmp_path / "resume.json").write_text("previous alias")
+    written = build_site(resume, out_dir=tmp_path)
+    names = {a.path.name for a in written}
+    index = (tmp_path / "index.html").read_text()
+    llms = (tmp_path / "llms.txt").read_text()
+    sitemap = (tmp_path / "sitemap.xml").read_text()
+    for fmt in ("pdf", "html", "json", "md"):
+        name = (
+            pdf_filename(resume["basics"]["name"], "short", "short")
+            if fmt == "pdf"
+            else f"resume-short.{fmt}"
+        )
+        assert (name in names) == (fmt != omitted)
+        assert (tmp_path / name).exists() == (fmt != omitted)
+        assert (f'href="{name}"' in index) == (fmt != omitted)
+        if fmt != "json":
+            assert (name in llms) == (fmt != omitted)
+    assert ("PDF · " in index) == (omitted != "pdf")
+    assert ("resume.json" in names) == (omitted != "json")
+    assert (tmp_path / "resume.json").exists() == (omitted != "json")
+    assert ("[resume.json]" in llms) == (omitted != "json")
+    assert ("## Machine-readable" in llms) == (omitted != "json")
+    assert ("resume-short.html" in sitemap) == (omitted != "html")
+    title = f"{resume['basics']['name']} — Resume"
+    assert llms.startswith(f"# {title}\n")
+    assert f"<title>{title}</title>" in index
+    assert f'property="og:title" content="{title}"' in index
+
+
+def test_llms_lists_secondary_json_without_primary_alias(resume):
+    cards = _cards("short", "full")
+    del cards[0]["json"]
+    llms = site_mod._render_llms(resume, cards)
+    assert "[resume.json]" not in llms
+    assert "[resume-full.json]" in llms

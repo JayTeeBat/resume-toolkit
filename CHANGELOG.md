@@ -14,6 +14,11 @@
 - Per-rule `severity` overrides force all findings to hard or soft, including
   JSON output; strict mode continues to fail on soft warnings.
 
+- Per-variant `formats` selects public site files and links; absent means all
+  four formats, while `resume build` retains every format by default.
+- Site titles, including `llms.txt` and landing-page previews, use
+  `<name> — Resume` to match HTML and PDF titles.
+
 ## 0.3.0 - 2026-11-01
 
 ### Changed

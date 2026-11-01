@@ -6,7 +6,7 @@
 #}
 {% set b = resume.basics %}
 {% set base = (resume.get('meta') or {}).get('canonical') or '' %}
-# {{ b.name }} — CV
+# {{ b.name }} — Resume
 
 > {{ b.label }}
 
@@ -16,19 +16,30 @@
 {% endif %}
 This site serves one CV in equivalent formats, all built from the same JSON
 Resume source. Every format of a given cut says exactly the same thing; for
-machine consumption, prefer the JSON.
+machine consumption, prefer the JSON when available.
 
+{% if cards[0].json %}
 ## Machine-readable
 
 - [resume.json]({{ base }}resume.json): canonical JSON Resume (v1.0.0 schema), the primary published cut{% if cards | length > 1 %} ({{ cards[0].name }}){% endif %}, with build provenance in `meta`
 
+{% endif %}
 ## Other formats
 
 {% for c in cards %}
+{% if c.pdf %}
 - [{{ c.pdf }}]({{ base }}{{ c.pdf }}): print-ready PDF{% if c.description %} — {{ c.description }}{% endif %}
 
+{% endif %}
+{% if c.html %}
 - [{{ c.html }}]({{ base }}{{ c.html }}): self-contained HTML
+{% endif %}
+{% if c.json and not loop.first %}
+- [{{ c.json }}]({{ base }}{{ c.json }}): JSON Resume
+{% endif %}
+{% if c.md %}
 - [{{ c.md }}]({{ base }}{{ c.md }}): Markdown
+{% endif %}
 {% endfor %}
 {% set source = (resume.get('meta') or {}).get('source') %}
 {% if source %}

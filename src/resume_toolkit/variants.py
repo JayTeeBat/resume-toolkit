@@ -29,6 +29,7 @@ from .paths import VARIANTS_TOML
 TAG_KEY = "x-tags"
 HIGHLIGHT_TAG_KEY = "x-highlights"
 WILDCARD = "*"
+SITE_FORMATS = ("pdf", "html", "json", "md")
 
 #: Top-level keys holding lists of taggable entries.
 TAGGABLE_SECTIONS = (
@@ -57,6 +58,8 @@ class Variant:
     publish: bool = False
     style: dict[str, str] = field(default_factory=dict)
 
+    formats: tuple[str, ...] = SITE_FORMATS
+
     @property
     def includes_everything(self) -> bool:
         return WILDCARD in self.include
@@ -76,7 +79,13 @@ def load_variants(path: Path = VARIANTS_TOML) -> dict[str, Variant]:
     for name, body in raw.items():
         if not isinstance(body, dict):
             raise ValueError(f"variant {name}: expected a table")
-        unknown = body.keys() - {"description", "include", "publish", "style"}
+        unknown = body.keys() - {
+            "description",
+            "include",
+            "publish",
+            "style",
+            "formats",
+        }
         if unknown:
             raise ValueError(
                 f"variant {name}: unknown keys: {', '.join(sorted(unknown))}"
@@ -90,6 +99,21 @@ def load_variants(path: Path = VARIANTS_TOML) -> dict[str, Variant]:
             raise ValueError(f"variant {name}.include: expected a list of strings")
         if not isinstance(body.get("publish", False), bool):
             raise ValueError(f"variant {name}.publish: expected a boolean")
+        formats = body.get("formats", list(SITE_FORMATS))
+        if (
+            not isinstance(formats, list)
+            or not formats
+            or any(not isinstance(fmt, str) for fmt in formats)
+        ):
+            raise ValueError(
+                f"variant {name}.formats: expected a non-empty list of strings"
+            )
+        if set(formats) - set(SITE_FORMATS):
+            raise ValueError(
+                f"variant {name}.formats: allowed values: {', '.join(SITE_FORMATS)}"
+            )
+        if len(formats) != len(set(formats)):
+            raise ValueError(f"variant {name}.formats: duplicate values")
         style = body.get("style", {})
         validate_style(style, where=f"variant {name}.style")
         variants[name] = Variant(
@@ -98,6 +122,7 @@ def load_variants(path: Path = VARIANTS_TOML) -> dict[str, Variant]:
             include=frozenset(include),
             publish=body.get("publish", False),
             style=style,
+            formats=tuple(formats),
         )
     return variants
 

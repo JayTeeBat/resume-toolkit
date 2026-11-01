@@ -46,7 +46,15 @@ def test_example_build_without_browser(example_workspace, fmt):
 
 
 @pytest.mark.slow
-def test_example_build_all_formats(example_workspace):
+@pytest.mark.parametrize("site_formats", [None, '["html"]'])
+def test_example_build_all_formats(example_workspace, site_formats):
+    if site_formats:
+        path = example_workspace / "variants.toml"
+        path.write_text(
+            path.read_text().replace(
+                "publish = true", f"publish = true\nformats = {site_formats}"
+            )
+        )
     run_cli(example_workspace, "build")
     for variant in ("full", "short"):
         for fmt in ("html", "json", "md"):

@@ -199,3 +199,30 @@ def test_repo_publishes_only_the_short_cut() -> None:
 def test_unknown_variant_names_the_known_ones() -> None:
     with pytest.raises(UnknownVariant, match="full"):
         get_variant("does-not-exist", FIXTURES / "variants.toml")
+
+
+@pytest.mark.parametrize(
+    ("value", "message"),
+    [
+        ('"pdf"', "non-empty list of strings"),
+        ("[]", "non-empty list of strings"),
+        ("[1]", "non-empty list of strings"),
+        ('["pdf", true]', "non-empty list of strings"),
+        ('["docx"]', "allowed values: pdf, html, json, md"),
+        ('["PDF"]', "allowed values: pdf, html, json, md"),
+        ('["pdf", "pdf"]', "duplicate values"),
+    ],
+)
+def test_invalid_site_formats_are_rejected(tmp_path, value, message):
+    path = tmp_path / "variants.toml"
+    path.write_text(f"[short]\nformats = {value}\n")
+    with pytest.raises(ValueError, match=message):
+        load_variants(path)
+
+
+def test_site_formats_default_and_selection(tmp_path):
+    path = tmp_path / "variants.toml"
+    path.write_text('[full]\n[short]\nformats = ["pdf", "html", "json"]\n')
+    variants = load_variants(path)
+    assert variants["full"].formats == ("pdf", "html", "json", "md")
+    assert variants["short"].formats == ("pdf", "html", "json")

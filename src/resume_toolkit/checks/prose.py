@@ -22,7 +22,12 @@ from .common import (
     phrase_matches,
 )
 from .config import CheckConfig, checked_variants
-from .language import SENTENCE_END, UNIT_WITHOUT_SPACE, US_SPELLING_STEMS
+from .language import (
+    NOUN_HOMOGRAPHS,
+    SENTENCE_END,
+    UNIT_WITHOUT_SPACE,
+    US_SPELLING_STEMS,
+)
 
 
 def punctuation(
@@ -110,23 +115,26 @@ def tense(
     """Current role (no endDate) opens bullets in the present; past roles in
     the past. Only verbs the lists recognise are judged, so noun-phrase
     summaries pass through unexamined — this catches drift, it does not prove
-    completeness.
+    completeness. Words in NOUN_HOMOGRAPHS ("Design", "Test"…) are not judged
+    in summaries, where they usually open a noun phrase.
     """
     violations: list[Violation] = []
     for i, entry in enumerate(resume.get("work", [])):
         current = "endDate" not in entry
         label = entry_label(entry)
         texts = (
-            [(f"$.work[{i}].summary  ({label})", entry["summary"])]
+            [(f"$.work[{i}].summary  ({label})", entry["summary"], True)]
             if "summary" in entry
             else []
         )
         texts += [
-            (f"$.work[{i}].highlights[{j}]  ({label})", h)
+            (f"$.work[{i}].highlights[{j}]  ({label})", h, False)
             for j, h in enumerate(entry.get("highlights", []))
         ]
-        for where, text in texts:
+        for where, text, is_summary in texts:
             word = first_word(text)
+            if is_summary and word in NOUN_HOMOGRAPHS:
+                continue
             present, past = looks_present(word, config.extra_verbs), looks_past(word)
             if current and past and not present:
                 violations.append(

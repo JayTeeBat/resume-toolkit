@@ -204,4 +204,7 @@ letter; whitespace, digits and punctuation are rejected. The default is `[]`.
 Use base present forms: configured verbs pass for current roles and are flagged
 for ended roles. Regular past forms still use the `-ed` heuristic, and built-in
 irregular past forms remain accepted. Unknown words still fail `verb_led`;
-`tense` only judges recognised forms, including summaries.
+`tense` only judges recognised forms, including summaries. Built-in verbs that
+often open a noun phrase (Design, Mentor, Model, Monitor, Support, Test, Train)
+are judged in highlights but not in summaries, so a summary such as "Design,
+sizing and development of …" on an ended role passes.

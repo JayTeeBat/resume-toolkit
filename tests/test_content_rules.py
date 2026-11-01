@@ -11,6 +11,7 @@ from resume_toolkit.checks.config import (
     SkillEvidence,
     load_config,
 )
+from resume_toolkit.checks.language import NOUN_HOMOGRAPHS
 from resume_toolkit.variants import Variant
 
 CUTS = {
@@ -262,7 +263,8 @@ def test_present_and_past_verbs_are_coherent(tmp_path, present, past):
         else:
             del role["endDate"]
         failures = run_checks({"work": [role]}, config, CUTS, fast=True)
-        assert len(failures) == 2
+        # Noun homographs are judged in the highlight, not the summary.
+        assert len(failures) == (1 if word in NOUN_HOMOGRAPHS else 2)
         assert all(v.rule == "tense" for v in failures)
     unknown = {"work": [{"highlights": ["Wibble systems."]}]}
     assert [v.rule for v in run_checks(unknown, config, CUTS, fast=True)] == [
@@ -272,3 +274,15 @@ def test_present_and_past_verbs_are_coherent(tmp_path, present, past):
     assert check(
         {"work": [{"highlights": ["Orchestrate systems."]}]}, enabled=["verb_led"]
     )
+
+
+def test_noun_phrase_summary_is_not_judged_for_tense():
+    """ "Design, sizing and development of …" is a noun phrase, not a verb."""
+    ended = {
+        "endDate": "2010-01",
+        "summary": "Design, sizing and development of a production rig.",
+        "highlights": ["Designed a production rig."],
+    }
+    assert check({"work": [ended]}, enabled=["tense", "verb_led"]) == []
+    ended["highlights"] = ["Design a production rig."]
+    assert [v.rule for v in check({"work": [ended]}, enabled=["tense"])] == ["tense"]

@@ -10,6 +10,9 @@
   Analyse, Analyze, Configure, Coordinate, Deploy, Design, Integrate, Mentor,
   Migrate, Model, Monitor, Operate, Optimise, Optimize, Simulate, Support,
   Test, Train and Validate. "Configure …" no longer fails `verb_led`.
+  The noun homographs among them (Design, Mentor, Model, Monitor, Support,
+  Test, Train) are not judged by `tense` in work summaries, so noun-phrase
+  summaries such as "Design, sizing and development of …" still pass.
 
 ### Added
 

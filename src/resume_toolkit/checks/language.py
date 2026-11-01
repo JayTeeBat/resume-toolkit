@@ -125,6 +125,11 @@ PRESENT_VERBS = {
     "Write",
 }
 
+# Present verbs that open noun-phrase summaries just as often ("Design, sizing
+# and development of …"). `tense` does not judge them in summaries; highlights
+# are verb-led, so there they are verbs and are judged.
+NOUN_HOMOGRAPHS = {"Design", "Mentor", "Model", "Monitor", "Support", "Test", "Train"}
+
 IRREGULAR_PAST = {
     "Built",
     "Brought",

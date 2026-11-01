@@ -13,15 +13,15 @@ Bundled fonts, an offline schema and fictional fixtures make the toolkit portabl
 Requires Python 3.13+ and uv. Once the repository and tag are published:
 
 ```sh
-uv add "resume-toolkit @ git+https://github.com/JayTeeBat/resume-toolkit@v0.3.0"
+uv add "resume-toolkit @ git+https://github.com/JayTeeBat/resume-toolkit@v0.4.0"
 uv run playwright install chromium
 ```
 
 For a standalone CLI:
 
 ```sh
-uv tool install "resume-toolkit @ git+https://github.com/JayTeeBat/resume-toolkit@v0.3.0"
-uv tool run --from "resume-toolkit @ git+https://github.com/JayTeeBat/resume-toolkit@v0.3.0" playwright install chromium
+uv tool install "resume-toolkit @ git+https://github.com/JayTeeBat/resume-toolkit@v0.4.0"
+uv tool run --from "resume-toolkit @ git+https://github.com/JayTeeBat/resume-toolkit@v0.4.0" playwright install chromium
 ```
 
 No PyPI release is planned yet.

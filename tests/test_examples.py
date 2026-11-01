@@ -84,3 +84,19 @@ def test_empty_pdf_name_is_a_clear_cli_error(example_workspace):
     )
     assert result.returncode == 2
     assert "basics.name must produce a nonempty ASCII PDF filename" in result.stdout
+
+
+@pytest.mark.parametrize("published", [True, False])
+@pytest.mark.parametrize("variant", ["short", "full"])
+def test_selected_build_colophon_uses_first_published_cut(
+    example_workspace, published, variant
+):
+    if not published:
+        path = example_workspace / "variants.toml"
+        path.write_text(path.read_text().replace("publish = true", "publish = false"))
+    for fmt in ("html", "md"):
+        run_cli(example_workspace, "build", "-v", variant, "-f", fmt)
+        text = (example_workspace / "dist" / f"resume-{variant}.{fmt}").read_text()
+        assert (f"{variant.title()} Version" in text) == (
+            not published or variant != "short"
+        )

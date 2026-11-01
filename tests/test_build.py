@@ -196,8 +196,9 @@ def test_pdf_build_produces_an_a4_document_with_extractable_text(
 @pytest.mark.slow
 @pytest.mark.parametrize("variant", ["one-page", "2-page", "full"])
 @pytest.mark.parametrize("dirty", [False, True])
+@pytest.mark.parametrize("primary", [None, "2-page"])
 def test_pdf_repeats_one_footer_with_page_numbers_on_every_page(
-    resume, tmp_path, monkeypatch, variant, dirty
+    resume, tmp_path, monkeypatch, variant, dirty, primary
 ) -> None:
     """Each page names the cut, the build and where the latest copy lives, and
     numbers itself; the text layer reads body first, footer last, once."""
@@ -219,15 +220,28 @@ def test_pdf_repeats_one_footer_with_page_numbers_on_every_page(
         written = build_variant(
             resume,
             replace(get_variant("short", FIXTURES / "variants.toml"), name=variant),
-            formats=("pdf",),
+            primary_variant=primary,
+            formats=("pdf", "html", "md"),
             out_dir=tmp_path,
         )
     except BrowserMissing as exc:
         pytest.skip(str(exc))
 
-    pages = pypdf.PdfReader(str(written[0].path)).pages
+    pages = pypdf.PdfReader(str(next(a.path for a in written if a.fmt == "pdf"))).pages
     assert len(pages) >= 2
-    footer = f"{variant.title()} Version · {label} · latest at example.com/cv"
+    version = f"{variant.title()} Version"
+    prefix = f"{version} · " if variant != primary else ""
+    footer = f"{prefix}{label} · latest at example.com/cv"
+    for artifact in written:
+        if artifact.fmt in {"html", "md"}:
+            text = artifact.path.read_text()
+            assert (version in text) == (variant != primary)
+            if artifact.fmt == "html":
+                row = text.split('<footer class="colophon footer-row">')[1]
+                assert not row.lstrip().startswith('<span class="sep"')
+                assert '<span class="field"></span>' not in row
+            else:
+                assert not text.split("---")[-1].strip().startswith("·")
     for number, page in enumerate(pages, start=1):
         lines = page.extract_text().splitlines()
         assert lines[-1] == f"{footer} · {number} / {len(pages)}"

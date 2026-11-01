@@ -6,6 +6,9 @@ Planned for 0.3.0.
 
 ### Changed
 
+- The primary (first published) cut omits its version label from the PDF
+  footer and HTML/Markdown colophons. Other cuts keep it; with no published
+  cut, every variant keeps its label. Builds and sites use the same rule.
 - Breaking: PDF downloads carry the ASCII-folded name from `basics.name`:
   `<Name>-Resume.pdf` for the first published cut, `<Name>-Resume-<Variant>.pdf`
   for others. Old PDF URLs have no redirects. Other formats keep their names.

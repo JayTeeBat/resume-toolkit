@@ -34,8 +34,9 @@ def build_variant(
     # Stamped once per variant, not per format, so the artifacts of the same
     # cut can never disagree about what they are.
     stamp = build_stamp()
+    label = variant.name if variant.name != primary_variant else None
     html = render_html(
-        data, theme=theme, variant=variant.name, stamp=stamp, style=variant.style
+        data, theme=theme, variant=label, stamp=stamp, style=variant.style
     )
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -51,7 +52,7 @@ def build_variant(
             data.get("basics", {}).get("name", ""), variant.name, primary_variant
         )
         footer = render_print_footer(
-            data, theme=theme, variant=variant.name, stamp=stamp, style=variant.style
+            data, theme=theme, variant=label, stamp=stamp, style=variant.style
         )
         html_to_pdf(html, path, footer, metadata=document_metadata(data))
         written.append(Artifact(variant.name, "pdf", path))
@@ -77,7 +78,7 @@ def build_variant(
         written.append(Artifact(variant.name, "json", path))
 
     if "md" in formats:
-        md = render_markdown(data, theme=theme, variant=variant.name, stamp=stamp)
+        md = render_markdown(data, theme=theme, variant=label, stamp=stamp)
         path = out_dir / f"resume-{variant.name}.md"
         path.write_text(md, encoding="utf-8")
         written.append(Artifact(variant.name, "md", path))

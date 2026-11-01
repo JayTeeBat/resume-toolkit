@@ -124,7 +124,8 @@ def test_index_leads_with_the_primary_cut_and_offers_the_rest(resume) -> None:
 def test_index_with_one_cut_shows_actions_only(resume) -> None:
     index = site_mod._render_index(resume, _cards("short"))
 
-    assert 'class="actions solo"' in index
+    assert index.count('class="actions solo"') == 1
+    assert "Other versions" not in index
     assert 'class="card' not in index
     assert "Short Version" not in index
 
@@ -309,3 +310,34 @@ def test_site_names_primary_and_alternative_pdfs(resume, tmp_path, monkeypatch) 
         assert (tmp_path / filename).is_file()
         assert f'href="{filename}"' in index
         assert filename in llms
+
+
+@pytest.mark.slow
+def test_single_published_cut_has_no_version_label(resume, tmp_path, monkeypatch):
+    from pypdf import PdfReader
+
+    cuts = {
+        name: Variant(name, "", frozenset({"*"}), publish=name == "2-page")
+        for name in ("one-page", "2-page", "full")
+    }
+    monkeypatch.setattr(site_mod, "load_variants", lambda: cuts)
+    artifacts = build_site(resume, out_dir=tmp_path)
+    assert {a.variant for a in artifacts if a.fmt == "pdf"} == {"2-page"}
+    for artifact in artifacts:
+        if artifact.variant == "2-page" and artifact.fmt in {"pdf", "html", "md"}:
+            text = (
+                PdfReader(artifact.path).pages[0].extract_text()
+                if artifact.fmt == "pdf"
+                else artifact.path.read_text()
+            )
+            assert "2-Page Version" not in text
+    index = (tmp_path / "index.html").read_text()
+    assert index.count('class="actions solo"') == 1
+    assert "Other versions" not in index
+    for name in ("one-page", "full"):
+        assert not list(tmp_path.glob(f"resume-{name}.*"))
+        for filename in ("index.html", "sitemap.xml", "llms.txt"):
+            assert f"resume-{name}" not in (tmp_path / filename).read_text()
+    assert (tmp_path / "resume.json").read_bytes() == (
+        tmp_path / "resume-2-page.json"
+    ).read_bytes()

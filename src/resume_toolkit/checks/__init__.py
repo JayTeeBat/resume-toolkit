@@ -1,6 +1,7 @@
 """Config-driven quality checks, independent of any particular CV."""
 
 from collections.abc import Callable
+from dataclasses import replace
 from pathlib import Path
 
 from ..variants import Variant
@@ -19,6 +20,8 @@ RULE_FUNCTIONS: dict[str, Rule] = {
         prose.unit_spacing,
         prose.tense,
         prose.verb_led,
+        prose.weak_phrases,
+        prose.skill_evidence,
         prose.quantified,
         prose.lengths,
         structure.highlights,
@@ -69,4 +72,6 @@ def run_checks(
             violations.extend(external.codespell(root, config))
         else:
             violations.extend(RULE_FUNCTIONS[name](resume, config, variants))
-    return violations
+    return [
+        replace(v, severity=config.severity.get(v.rule, v.severity)) for v in violations
+    ]

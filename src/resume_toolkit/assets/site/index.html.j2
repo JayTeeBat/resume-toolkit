@@ -8,7 +8,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{ resume.basics.name }} — CV</title>
+<title>{{ resume.basics.name }} — Resume</title>
 <meta name="description" content="{{ resume.basics.label }}">
 {# Initials favicon, derived from the name so it never goes stale. Inline SVG
    data URI: no asset file to copy, nothing extra for Pages to serve. #}
@@ -18,7 +18,7 @@
    and without og: tags those render it as a bare link. #}
 {% set canonical = (resume.get('meta') or {}).get('canonical') %}
 <meta property="og:type" content="profile">
-<meta property="og:title" content="{{ resume.basics.name }} — CV">
+<meta property="og:title" content="{{ resume.basics.name }} — Resume">
 <meta property="og:description" content="{{ resume.basics.label }}">
 {% if canonical %}
 <meta property="og:url" content="{{ canonical }}">
@@ -153,11 +153,11 @@
   {# One macro for both layouts, so the buttons cannot drift apart: each is
      labelled by its file type alone. #}
   {% macro actions(c) -%}
-  <a class="btn primary" href="{{ c.html }}">HTML</a>
-      <a class="btn" href="{{ c.pdf }}" target="_blank" rel="noopener">PDF</a>
-      <a class="btn" href="{{ c.json }}">JSON</a>
-      <a class="btn" href="{{ c.md }}">Markdown</a>
-      <span class="size">PDF · {{ c.size }}</span>
+  {% if c.html %}<a class="btn primary" href="{{ c.html }}">HTML</a>{% endif %}
+      {% if c.pdf %}<a class="btn" href="{{ c.pdf }}" target="_blank" rel="noopener">PDF</a>{% endif %}
+      {% if c.json %}<a class="btn" href="{{ c.json }}">JSON</a>{% endif %}
+      {% if c.md %}<a class="btn" href="{{ c.md }}">Markdown</a>{% endif %}
+      {% if c.pdf %}<span class="size">PDF · {{ c.size }}</span>{% endif %}
   {%- endmacro %}
 
   {# The first published variant in variants.toml is the primary cut: it
@@ -165,7 +165,7 @@
      carry the version name and its actions only: variant descriptions are
      notes for the CV's author and for llms.txt, not copy for visitors. A lone
      cut shows no name, just the actions. Any further published cuts follow
-     as quieter alternatives, in file order, with the same four actions. #}
+     as quieter alternatives, in file order, with their selected actions. #}
   {% set primary = cards[0] %}
   {% if cards | length == 1 %}
     <div class="actions solo">

@@ -88,6 +88,25 @@ The substring must match exactly **one** bullet; the build fails loudly if an ed
 breaks the match, because a rule that silently stopped matching would silently republish the
 bullet everywhere. Like `x-tags`, `x-highlights` is stripped before rendering.
 
+### Published formats
+
+`resume site` publishes only variants with `publish = true`. Each can select
+its public formats:
+
+```toml
+[2-page]
+publish = true
+formats = ["pdf", "html", "json"]
+```
+
+Omitting `formats` keeps all four: `pdf`, `html`, `json`, `md`. The value must
+be a non-empty list of strings from those values, without duplicates. Selection
+controls site files, landing-page buttons, PDF size, `llms.txt` links and HTML
+sitemap entries. The first published cut supplies `/resume.json` only when it
+includes `json`; otherwise the alias and its Machine-readable section are absent.
+`resume build` still builds every format of every variant by default, including
+Markdown for private CI artifacts; `--format` remains its explicit selector.
+
 ### Per-variant design tokens
 
 A variant may override tokens declared by the selected theme:
@@ -133,14 +152,14 @@ go: ATS web forms, plain-text email, LLM prompts.
 
 The first published variant in `variants.toml` is the primary cut: the index
 shows it first and most prominently, and the canonical `resume.json` alias and
-`llms.txt` point at it. Further published variants follow it on the index as
-alternatives, in file order, with the same HTML, PDF, JSON and Markdown actions.
+`llms.txt` point at it when JSON is selected. Further published variants follow it on the index as
+alternatives, in file order, with their selected format actions.
 Reorder `variants.toml` to change the primary cut. Its PDF footer and HTML/Markdown
 colophons omit the version label; every other cut keeps it. This applies to both
 `resume build` and `resume site`. With no published variant, all labels remain.
 
 Besides variant artifacts, the site includes `index.html`, a canonical `resume.json`
-alias, `llms.txt`, `404.html`, `robots.txt` and a sitemap when `meta.canonical` is set.
+alias (when the primary publishes JSON), `llms.txt`, `404.html`, `robots.txt` and a sitemap when `meta.canonical` is set.
 The source link and build provenance come from the content repository, not the
 installed toolkit. A directory without git history has no provenance stamp.
 Readers see the stamp as `2026-10-31 · rev 39140c4` in the PDF footer, the
@@ -156,10 +175,10 @@ words with `-`, then drop characters outside `[A-Za-z0-9-]`. An empty result
 fails the build. Variant parts are title-cased (`one-page` becomes `One-Page`).
 `resume build -v` uses the same primary cut as the site; with no published
 variants, every PDF includes its variant suffix. HTML, JSON and Markdown keep
-`resume-<variant>.*`, and `/resume.json` remains the primary JSON alias.
+`resume-<variant>.*`, and `/resume.json` is the primary JSON alias when selected.
 Old PDF URLs have no redirects. The sitemap continues to list HTML pages only.
 
-The classic HTML title and PDF Title are `<basics.name> — Resume`. PDF Author
+The site titles, classic HTML title and PDF Title are `<basics.name> — Resume`. PDF Author
 is `basics.name`, Subject is `basics.label`, and Keywords are the filtered cut's
 skill keywords, deduplicated in original order and separated by commas.
 Post-processing with pypdf preserves Chromium's title, dates and page content;

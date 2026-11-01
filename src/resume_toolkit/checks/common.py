@@ -83,3 +83,9 @@ def match_context(text: str, match: re.Match[str], margin: int = 20) -> str:
     prefix = "…" if lo > 0 else ""
     suffix = "…" if hi < len(text) else ""
     return f"{prefix}{text[lo:hi]}{suffix}"
+
+
+def phrase_matches(phrase: str, text: str) -> bool:
+    return bool(
+        re.search(r"(?<!\w)" + re.escape(phrase) + r"(?!\w)", text, re.IGNORECASE)
+    )

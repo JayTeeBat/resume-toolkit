@@ -16,7 +16,9 @@ and 2 for invalid inputs or unavailable dependencies. No command auto-fixes pros
 
 All rules below are enabled by default. `enabled = ["punctuation", "dates"]`,
 for example, selects only those two. Every violation is hard except length
-advice within the hard bounds. Minimal policy: an empty TOML file.
+advice within the hard bounds, missing skill evidence, and soft weak phrases.
+Unknown skill-evidence alias/exempt entries are hard violations. A `severity`
+override can change every violation of a rule (see below). Minimal policy: an empty TOML file.
 
 | Rule | Config key(s) and default behavior |
 |---|---|
@@ -26,12 +28,14 @@ advice within the hard bounds. Minimal policy: an empty TOML file.
 | `typography` | No double/edge spaces, spaced hyphens, ASCII multiplication or trailing currency symbols |
 | `unit_spacing` | Built-in unit symbols require whitespace after numbers (`10 kWh`, `±3 %`, `25 °C`), per the [SI Brochure, 9th edition (2019)](https://www.bipm.org/en/publications/si-brochure) §5.4.3 and §5.4.7; the list in `checks/language.py` is SI, accepted-for-use and common battery units, curated rather than exhaustive |
 | `tense` | Built-in English verb lists; current role present, ended role past |
+| `skill_evidence` | `skill_evidence = {}`; soft evidence coverage in summaries/highlights after filtering; aliases and exemptions supported |
+| `weak_phrases` | `weak_phrases = { hard = [...], soft = [...] }`; built-in phrases below, each supplied list replaces its default |
 | `verb_led` | Highlights start with a recognized present/past verb or an `-ed` word |
 | `quantified` | At least one digit in each published work entry's summary/highlights |
 | `lengths` | `summary_sentences = 1`, `summary_soft_max = 25`, `summary_hard_max = 30`; minimum 1 word |
 | `lengths` | `highlight_soft_range = [10, 30]`, `highlight_hard_range = [3, 40]`; whitespace-separated words |
 | `required_sections` | `required_sections = {}`; required non-empty sections after filtering, wildcard plus variant union |
-| `role_highlights` | `role_highlights = {}`; per-variant minimum nonblank work highlights, optionally since a month |
+| `role_highlights` | `role_highlights = {}`; per-variant nonblank work highlight limits, as a single table or non-overlapping date bands |
 | `highlights` | Each work entry has at least one nonblank highlight |
 | `locations` | `location_pattern = '[^,\s][^,]*, [^,\s][^,]*'`; full match for City, Country |
 | `tags` | Tags name variants or their included tags; `*` is a selector, never a tag |
@@ -48,7 +52,7 @@ advice within the hard bounds. Minimal policy: an empty TOML file.
 
 ### Which cuts are checked
 
-`required_sections`, `role_highlights`, `quantified`, `page_budget`, `header` and `page_breaks` check cuts, not the
+`required_sections`, `role_highlights`, `skill_evidence`, `weak_phrases`, `quantified`, `page_budget`, `header` and `page_breaks` check cuts, not the
 whole document. `published_variants = []` selects every variant with
 `publish = true`, in `variants.toml` order, or all entries if none is
 published. A list, e.g. `published_variants = ["one-page"]`, selects those
@@ -128,3 +132,65 @@ Diagnostics identify the source role and the `x-tags` or `x-highlights` entries
 to change; no wording is generated. `min` must be a nonnegative integer.
 Unknown variant names, invalid month dates and malformed tables are errors.
 Only `required_sections` accepts the wildcard key.
+
+### Skill evidence and weak phrases
+
+Both rules run under `--fast`. For each checked cut after filtering, skill
+keywords must appear in `basics.summary`, a work summary, or a work highlight.
+Matching is case-insensitive with whole-word/phrase boundaries, not stemming.
+Split keywords on `/` and `&`, trim each part, and ignore empty parts; any part
+or configured alias counts. Evidence cannot come from another cut or from the
+skills list itself. Alias/exempt keys match keywords case-insensitively.
+
+```toml
+[skill_evidence]
+aliases = { "System architecture" = ["architecture"] }
+exempt = ["Rust"]
+```
+
+Unknown keywords in aliases or exemptions produce hard violations against the
+whole source skills list; aliases that are never needed are allowed. Missing
+evidence is soft by default and reported separately for each cut and group.
+
+`weak_phrases` checks the same sentence fields after filtering. Hits shared by
+cuts are reported once, naming the affected cuts and source section/entry.
+It is independent of `verb_led`. Each supplied list replaces that level's
+default (an empty list disables that level); omitted levels keep defaults.
+A phrase in both lists, ignoring case, is a configuration error.
+
+```toml
+weak_phrases = { hard = ["helped", "worked on", "assisted", "responsible for", "was involved in"], soft = ["leveraged", "leverage", "synergy", "synergies", "robust", "scalable", "cutting-edge", "we", "our"] }
+```
+
+### Role highlight bands
+
+The single-table form above remains supported. A variant may instead use a
+nonempty list of bands, each with at least one of `min` or `max`:
+
+```toml
+[role_highlights]
+"one-page" = [{ since = "2020-11", min = 3, max = 5 }, { before = "2016-11", max = 1 }]
+```
+
+Dates are valid `YYYY-MM` months on the role's `startDate`: `since` is inclusive,
+`before` exclusive. Omitted date bounds are unbounded; bands for the same variant
+must not overlap (adjacent bands are valid). Counts are nonnegative integers,
+with `min <= max` when both exist. A `since` band with `min >= 1` also requires
+the source role to survive filtering; max-only or zero-minimum bands do not.
+The legacy single-table form retains its existing `since` survival requirement,
+including when `min = 0`. Maximum violations identify the company, position, cut, count, limit and the
+surviving bullets to choose from when dropping `x-highlights` from that cut.
+
+### Severity overrides
+
+At the top level, keys must name known rules and values must be `hard` or `soft`:
+
+```toml
+severity = { skill_evidence = "hard", weak_phrases = "soft" }
+```
+
+An override forces **every** violation of that rule to the chosen level,
+including both levels emitted by `lengths` or `weak_phrases` and stale entries
+from `skill_evidence`. JSON `severity` reflects the override. `--strict` still
+fails on soft warnings without changing their reported severity. Configuration
+errors remain errors and cannot be softened.

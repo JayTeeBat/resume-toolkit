@@ -81,3 +81,30 @@ def test_input_errors_exit_two(workspace, args) -> None:
     result = runner.invoke(app, ["check", "--fast", *args])
     assert result.exit_code == 2
     assert "error" in result.output
+
+
+@pytest.mark.parametrize(
+    ("rule", "level", "strict", "code"),
+    [
+        ("lengths", "soft", False, 0),
+        ("lengths", "soft", True, 1),
+        ("skill_evidence", "hard", False, 1),
+        ("weak_phrases", "soft", True, 1),
+    ],
+)
+def test_severity_override_json_and_strict(workspace, rule, level, strict, code):
+    (workspace / "resume-checks.toml").write_text(
+        f'enabled = ["{rule}"]\nseverity = {{ {rule} = "{level}" }}'
+    )
+    path = workspace / "resume.json"
+    data = json.loads(path.read_text())
+    data["work"][0]["highlights"] = ["Helped."]
+    data["skills"] = [{"name": "Engineering", "keywords": ["Unevidenced"]}]
+    path.write_text(json.dumps(data))
+    result = runner.invoke(
+        app, ["check", "--fast", "--format", "json"] + (["--strict"] if strict else [])
+    )
+    assert result.exit_code == code, result.output
+    failures = json.loads(result.output)
+    assert failures
+    assert {v["severity"] for v in failures} == {level}

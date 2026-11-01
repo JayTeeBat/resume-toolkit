@@ -16,8 +16,9 @@ from markupsafe import Markup
 
 from .build import Artifact, build_variant
 from .paths import DIST_DIR, SITE_DIR
+from .pdf import pdf_filename
 from .render import location, urlhost
-from .variants import Variant, load_variants
+from .variants import SITE_FORMATS, Variant, load_variants
 from .version import build_stamp
 
 INDEX_TEMPLATE = "index.html.j2"
@@ -29,15 +30,13 @@ def _human_size(num_bytes: int) -> str:
     return f"{num_bytes / 1024:.0f} KB"
 
 
-def _card(variant: Variant, pdf: Path) -> dict:
+def _card(variant: Variant, artifacts: list[Artifact]) -> dict:
+    paths = {a.fmt: a.path for a in artifacts if a.variant == variant.name}
     return {
         "name": variant.name,
         "description": variant.description,
-        "pdf": pdf.name,
-        "html": f"resume-{variant.name}.html",
-        "json": f"resume-{variant.name}.json",
-        "md": f"resume-{variant.name}.md",
-        "size": _human_size(pdf.stat().st_size),
+        **{fmt: path.name for fmt, path in paths.items()},
+        "size": _human_size(paths["pdf"].stat().st_size) if "pdf" in paths else None,
     }
 
 
@@ -121,7 +120,7 @@ def _sitemap(canonical: str, cards: list[dict], modified: str | None) -> str:
     """
     base = canonical.rstrip("/") + "/"
     lastmod = f"<lastmod>{modified}</lastmod>" if modified else ""
-    urls = [base] + [base + c["html"] for c in cards]
+    urls = [base] + [base + c["html"] for c in cards if "html" in c]
     entries = "\n".join(f"  <url><loc>{u}</loc>{lastmod}</url>" for u in urls)
     return (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
@@ -137,7 +136,7 @@ def build_site(
     theme: str = "classic",
     out_dir: Path = DIST_DIR,
 ) -> list[Artifact]:
-    """Build every publishable variant as PDF/HTML/JSON/Markdown, plus the front matter.
+    """Build each publishable variant in its selected formats, plus the front matter.
 
     The JSON and Markdown are machine- and paste-ready cuts of the same variant,
     so no consumer can ever disagree with the PDF about what the CV says. Only
@@ -148,8 +147,9 @@ def build_site(
 
     Beyond the variants, the site gets its front matter: index.html (the human
     front door), /resume.json (the guessable machine address — an alias of the
-    primary cut), /llms.txt (the note an AI agent reads first), 404.html (the
-    route back for dead links), and robots.txt + sitemap.xml (crawler guidance).
+    primary cut, when it publishes JSON), /llms.txt (the note an AI agent reads
+    first), 404.html (the route back for dead links), and robots.txt + sitemap.xml
+    (crawler guidance).
     """
     variants = [v for v in load_variants().values() if v.publish]
     if not variants:
@@ -160,13 +160,25 @@ def build_site(
 
     written: list[Artifact] = []
     for variant in variants:
+        # A changed selection must not leave an older public download behind.
+        for fmt in set(SITE_FORMATS) - set(variant.formats):
+            filename = (
+                pdf_filename(
+                    resume.get("basics", {}).get("name", ""),
+                    variant.name,
+                    variants[0].name,
+                )
+                if fmt == "pdf"
+                else f"resume-{variant.name}.{fmt}"
+            )
+            (out_dir / filename).unlink(missing_ok=True)
         written.extend(
             build_variant(
                 resume,
                 variant,
                 theme=theme,
                 primary_variant=variants[0].name,
-                formats=("pdf", "html", "json", "md"),
+                formats=variant.formats,
                 out_dir=out_dir,
             )
         )
@@ -176,13 +188,14 @@ def build_site(
     # the URL — the address survives renaming the variant behind it. Byte-for-
     # byte the primary (first published) cut, copied so the two cannot drift.
     primary = variants[0]
+    cards = [_card(v, written) for v in variants]
     alias = out_dir / "resume.json"
-    alias.write_bytes((out_dir / f"resume-{primary.name}.json").read_bytes())
-    written.append(Artifact(primary.name, "json", alias))
+    if "json" in primary.formats:
+        alias.write_bytes((out_dir / f"resume-{primary.name}.json").read_bytes())
+        written.append(Artifact(primary.name, "json", alias))
+    else:
+        alias.unlink(missing_ok=True)
 
-    # Cards are built after the PDFs exist, because each one reports its size.
-    pdfs = {a.variant: a.path for a in written if a.fmt == "pdf"}
-    cards = [_card(v, pdfs[v.name]) for v in variants]
     index = out_dir / "index.html"
     index.write_text(_render_index(resume, cards), encoding="utf-8")
     written.append(Artifact("index", "html", index))

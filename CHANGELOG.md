@@ -2,6 +2,23 @@
 
 ## [Unreleased]
 
+## 0.4.0 (unreleased)
+
+### Added
+
+- Fast `skill_evidence` checks each filtered cut's skills against its summaries
+  and highlights, with aliases, exemptions and stale-entry diagnostics.
+- Fast `weak_phrases` reports hard/soft wording with replaceable phrase lists.
+- `role_highlights` accepts non-overlapping date bands with minimum and maximum
+  counts while retaining the single-table form.
+- Per-rule `severity` overrides force all findings to hard or soft, including
+  JSON output; strict mode continues to fail on soft warnings.
+
+- Per-variant `formats` selects public site files and links; absent means all
+  four formats, while `resume build` retains every format by default.
+- Site titles, including `llms.txt` and landing-page previews, use
+  `<name> — Resume` to match HTML and PDF titles.
+
 ## 0.3.0 - 2026-11-01
 
 ### Changed

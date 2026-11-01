@@ -19,6 +19,7 @@ from .common import (
     looks_past,
     looks_present,
     match_context,
+    phrase_matches,
 )
 from .config import CheckConfig, checked_variants
 from .language import SENTENCE_END, UNIT_WITHOUT_SPACE, US_SPELLING_STEMS
@@ -250,3 +251,87 @@ def lengths(
             )
             violations.append(replace(violation, severity="soft"))
     return finish("lengths", violations)
+
+
+def weak_phrases(
+    resume: dict, config: CheckConfig, variants: dict[str, Variant]
+) -> list[Violation]:
+    hits: dict[tuple[str, str, str, str], list[str]] = {}
+    for variant in checked_variants("weak_phrases", config, variants):
+        # Filter each source entry separately to retain stable diagnostic indices.
+        for section, entries in (
+            ("basics", [resume.get("basics", {})]),
+            ("work", resume.get("work", [])),
+        ):
+            for i, entry in enumerate(entries):
+                source = {section: entry if section == "basics" else [entry]}
+                shown = list(iter_sentences(apply_variant(source, variant)))
+                for where, text in iter_sentences(source):
+                    if not any(
+                        text == value and (".summary" in where) == (".summary" in path)
+                        for path, value in shown
+                    ):
+                        continue
+                    where = where.replace("$.work[0]", f"$.work[{i}]")
+                    for level, phrases in config.weak_phrases.items():
+                        for phrase in phrases:
+                            if phrase_matches(phrase, text):
+                                hits.setdefault(
+                                    (where, text, phrase, level), []
+                                ).append(variant.name)
+    return finish(
+        "weak_phrases",
+        [
+            Violation(
+                f"{where} (in {', '.join(dict.fromkeys(cuts))})",
+                text,
+                f'weak phrase "{phrase}" — state the owned action/outcome instead',
+                severity="hard" if level == "hard" else "soft",
+            )
+            for (where, text, phrase, level), cuts in hits.items()
+        ],
+    )
+
+
+def skill_evidence(
+    resume: dict, config: CheckConfig, variants: dict[str, Variant]
+) -> list[Violation]:
+    known = {
+        kw.casefold()
+        for group in resume.get("skills", [])
+        for kw in group.get("keywords", [])
+    }
+    policy = config.skill_evidence
+    violations = [
+        Violation(
+            f"skill_evidence.{key}",
+            kw,
+            "unknown skill keyword — remove this entry or name an existing keyword",
+        )
+        for key, keywords in (("aliases", policy.aliases), ("exempt", policy.exempt))
+        for kw in keywords
+        if kw.casefold() not in known
+    ]
+    aliases = {kw.casefold(): values for kw, values in policy.aliases.items()}
+    exempt = {kw.casefold() for kw in policy.exempt}
+    for variant in checked_variants("skill_evidence", config, variants):
+        filtered = apply_variant(resume, variant)
+        texts = [text for _, text in iter_sentences(filtered)]
+        for group in filtered.get("skills", []):
+            for kw in group.get("keywords", []):
+                parts = [part.strip() for part in re.split(r"[/&]", kw) if part.strip()]
+                parts += aliases.get(kw.casefold(), [])
+                if kw.casefold() in exempt or any(
+                    phrase_matches(part, text) for part in parts for text in texts
+                ):
+                    continue
+                violations.append(
+                    Violation(
+                        f'{variant.name}: skill "{kw}" ({group.get("name", "?")})',
+                        "has no evidence in any summary or highlight",
+                        "add a highlight that shows it, add an alias under "
+                        "[skill_evidence.aliases], exempt it, or drop it",
+                        severity="soft",
+                    )
+                )
+    return finish("skill_evidence", violations)

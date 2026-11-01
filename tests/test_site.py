@@ -14,7 +14,7 @@ from conftest import FIXTURES
 from markupsafe import escape
 
 from resume_toolkit import site as site_mod
-from resume_toolkit.pdf import BrowserMissing
+from resume_toolkit.pdf import BrowserMissing, pdf_filename
 from resume_toolkit.site import build_site
 from resume_toolkit.variants import Variant, load_variants
 
@@ -64,7 +64,7 @@ def test_index_prioritises_html_and_opens_pdf_in_a_browser(resume) -> None:
         "name": "short",
         "description": "Published CV",
         "html": "resume-short.html",
-        "pdf": "resume-short.pdf",
+        "pdf": "Alex-Morgan-Resume.pdf",
         "json": "resume-short.json",
         "md": "resume-short.md",
         "size": "42 KB",
@@ -74,8 +74,8 @@ def test_index_prioritises_html_and_opens_pdf_in_a_browser(resume) -> None:
 
     assert '<a class="btn primary" href="resume-short.html">HTML</a>' in index
     assert (
-        '<a class="btn" href="resume-short.pdf" target="_blank" rel="noopener">PDF</a>'
-        in index
+        '<a class="btn" href="Alex-Morgan-Resume.pdf" '
+        'target="_blank" rel="noopener">PDF</a>' in index
     )
     assert "download=" not in index
     assert index.index(card["html"]) < index.index(card["pdf"])
@@ -89,7 +89,7 @@ def _cards(*names: str) -> list[dict]:
             "name": name,
             "description": f"The {name} cut",
             "html": f"resume-{name}.html",
-            "pdf": f"resume-{name}.pdf",
+            "pdf": pdf_filename("Alex Morgan", name, names[0]),
             "json": f"resume-{name}.json",
             "md": f"resume-{name}.md",
             "size": "42 KB",
@@ -109,11 +109,14 @@ def test_index_leads_with_the_primary_cut_and_offers_the_rest(resume) -> None:
     assert index.count('class="card primary-card"') == 1
     assert index.count('class="card alternative"') == 2
     assert alternatives < index.index("2-Page Version") < index.index("Full Version")
-    for name in ("one-page", "2-page", "full"):
-        actions = re.findall(rf'href="resume-{name}\.\w+"[^>]*>(\w+)</a>', index)
+    for card in _cards("one-page", "2-page", "full"):
+        targets = "|".join(
+            re.escape(card[fmt]) for fmt in ("html", "pdf", "json", "md")
+        )
+        actions = re.findall(rf'href="(?:{targets})"[^>]*>(\w+)</a>', index)
         assert actions == ["HTML", "PDF", "JSON", "Markdown"]
         # Descriptions are author notes, kept for llms.txt but not shown.
-        assert f"The {name} cut" not in index
+        assert card["description"] not in index
     assert "Built from" not in index
     assert re.search(r"<footer>Updated \d{4}-\d{2}-\d{2}</footer>", index)
 
@@ -121,7 +124,8 @@ def test_index_leads_with_the_primary_cut_and_offers_the_rest(resume) -> None:
 def test_index_with_one_cut_shows_actions_only(resume) -> None:
     index = site_mod._render_index(resume, _cards("short"))
 
-    assert 'class="actions solo"' in index
+    assert index.count('class="actions solo"') == 1
+    assert "Other versions" not in index
     assert 'class="card' not in index
     assert "Short Version" not in index
 
@@ -131,44 +135,62 @@ def test_llms_txt_names_the_primary_cut_and_lists_every_cut(resume) -> None:
 
     assert "primary published cut (one-page)" in llms
     for name in ("one-page", "2-page", "full"):
-        assert f"resume-{name}.pdf" in llms
+        assert pdf_filename("Alex Morgan", name, "one-page") in llms
         assert f"The {name} cut" in llms
 
 
 @pytest.mark.slow
-def test_site_builds_an_index_and_every_published_variant(built) -> None:
+def test_site_builds_an_index_and_every_published_variant(built, resume) -> None:
     written, out = built
     names = {a.path.name for a in written}
 
     assert "index.html" in names
     for variant in _published():
         for fmt in ("pdf", "html", "json", "md"):
-            assert f"resume-{variant}.{fmt}" in names
+            target = (
+                pdf_filename(resume["basics"]["name"], variant, _published()[0])
+                if fmt == "pdf"
+                else f"resume-{variant}.{fmt}"
+            )
+            assert target in names
 
 
 @pytest.mark.slow
-def test_unpublished_variants_never_reach_the_site(built) -> None:
+def test_unpublished_variants_never_reach_the_site(built, resume) -> None:
     """The whole point of the flag: a private cut must leave no file to leak."""
     written, out = built
     names = {a.path.name for a in written}
 
     for variant in _unpublished():
         for fmt in ("pdf", "html", "json", "md"):
-            assert f"resume-{variant}.{fmt}" not in names
-            assert not (out / f"resume-{variant}.{fmt}").exists()
+            target = (
+                pdf_filename(resume["basics"]["name"], variant, _published()[0])
+                if fmt == "pdf"
+                else f"resume-{variant}.{fmt}"
+            )
+            assert target not in names
+            assert not (out / target).exists()
 
 
 @pytest.mark.slow
-def test_index_links_resolve_to_files_that_exist(built) -> None:
+def test_index_links_resolve_to_files_that_exist(built, resume) -> None:
     """A landing page whose download buttons 404 is worse than no landing page."""
     written, out = built
     index = (out / "index.html").read_text(encoding="utf-8")
 
     for variant in _published():
         for fmt in ("pdf", "html", "json", "md"):
-            target = f"resume-{variant}.{fmt}"
+            target = (
+                pdf_filename(resume["basics"]["name"], variant, _published()[0])
+                if fmt == "pdf"
+                else f"resume-{variant}.{fmt}"
+            )
             assert f'href="{target}"' in index, f"index.html does not link {target}"
             assert (out / target).is_file()
+            if fmt == "pdf":
+                assert f"PDF · {(out / target).stat().st_size / 1024:.0f} KB" in index
+                assert target in (out / "llms.txt").read_text()
+                assert not (out / f"resume-{variant}.pdf").exists()
 
 
 @pytest.mark.slow
@@ -265,3 +287,57 @@ def test_sitemap_lists_the_index_and_every_published_page(built, resume) -> None
     assert base in locs
     for variant in _published():
         assert f"{base}resume-{variant}.html" in locs
+
+
+@pytest.mark.slow
+def test_site_names_primary_and_alternative_pdfs(resume, tmp_path, monkeypatch) -> None:
+    cuts = {
+        name: Variant(name, "", frozenset({"*"}), publish=name != "private")
+        for name in ("private", "2-page", "one-page", "full")
+    }
+    monkeypatch.setattr(site_mod, "load_variants", lambda: cuts)
+    resume["basics"]["name"] = "Élodie Morgan"
+    artifacts = build_site(resume, out_dir=tmp_path)
+    filenames = {a.path.name for a in artifacts if a.fmt == "pdf"}
+    assert filenames == {
+        "Elodie-Morgan-Resume.pdf",
+        "Elodie-Morgan-Resume-One-Page.pdf",
+        "Elodie-Morgan-Resume-Full.pdf",
+    }
+    index = (tmp_path / "index.html").read_text()
+    llms = (tmp_path / "llms.txt").read_text()
+    for filename in filenames:
+        assert (tmp_path / filename).is_file()
+        assert f'href="{filename}"' in index
+        assert filename in llms
+
+
+@pytest.mark.slow
+def test_single_published_cut_has_no_version_label(resume, tmp_path, monkeypatch):
+    from pypdf import PdfReader
+
+    cuts = {
+        name: Variant(name, "", frozenset({"*"}), publish=name == "2-page")
+        for name in ("one-page", "2-page", "full")
+    }
+    monkeypatch.setattr(site_mod, "load_variants", lambda: cuts)
+    artifacts = build_site(resume, out_dir=tmp_path)
+    assert {a.variant for a in artifacts if a.fmt == "pdf"} == {"2-page"}
+    for artifact in artifacts:
+        if artifact.variant == "2-page" and artifact.fmt in {"pdf", "html", "md"}:
+            text = (
+                PdfReader(artifact.path).pages[0].extract_text()
+                if artifact.fmt == "pdf"
+                else artifact.path.read_text()
+            )
+            assert "2-Page Version" not in text
+    index = (tmp_path / "index.html").read_text()
+    assert index.count('class="actions solo"') == 1
+    assert "Other versions" not in index
+    for name in ("one-page", "full"):
+        assert not list(tmp_path.glob(f"resume-{name}.*"))
+        for filename in ("index.html", "sitemap.xml", "llms.txt"):
+            assert f"resume-{name}" not in (tmp_path / filename).read_text()
+    assert (tmp_path / "resume.json").read_bytes() == (
+        tmp_path / "resume-2-page.json"
+    ).read_bytes()

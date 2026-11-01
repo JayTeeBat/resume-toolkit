@@ -29,8 +29,7 @@ def _human_size(num_bytes: int) -> str:
     return f"{num_bytes / 1024:.0f} KB"
 
 
-def _card(variant: Variant, out_dir: Path) -> dict:
-    pdf = out_dir / f"resume-{variant.name}.pdf"
+def _card(variant: Variant, pdf: Path) -> dict:
     return {
         "name": variant.name,
         "description": variant.description,
@@ -166,6 +165,7 @@ def build_site(
                 resume,
                 variant,
                 theme=theme,
+                primary_variant=variants[0].name,
                 formats=("pdf", "html", "json", "md"),
                 out_dir=out_dir,
             )
@@ -181,7 +181,8 @@ def build_site(
     written.append(Artifact(primary.name, "json", alias))
 
     # Cards are built after the PDFs exist, because each one reports its size.
-    cards = [_card(v, out_dir) for v in variants]
+    pdfs = {a.variant: a.path for a in written if a.fmt == "pdf"}
+    cards = [_card(v, pdfs[v.name]) for v in variants]
     index = out_dir / "index.html"
     index.write_text(_render_index(resume, cards), encoding="utf-8")
     written.append(Artifact("index", "html", index))

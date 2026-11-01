@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .paths import DIST_DIR
-from .pdf import html_to_pdf
+from .pdf import document_metadata, html_to_pdf, pdf_filename
 from .render import render_html, render_markdown, render_print_footer
 from .variants import Variant, apply_variant
 from .version import build_stamp
@@ -25,6 +25,7 @@ def build_variant(
     variant: Variant,
     *,
     theme: str = "classic",
+    primary_variant: str | None = None,
     formats: tuple[str, ...] = ("pdf", "html"),
     out_dir: Path = DIST_DIR,
 ) -> list[Artifact]:
@@ -33,8 +34,9 @@ def build_variant(
     # Stamped once per variant, not per format, so the artifacts of the same
     # cut can never disagree about what they are.
     stamp = build_stamp()
+    label = variant.name if variant.name != primary_variant else None
     html = render_html(
-        data, theme=theme, variant=variant.name, stamp=stamp, style=variant.style
+        data, theme=theme, variant=label, stamp=stamp, style=variant.style
     )
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -46,11 +48,13 @@ def build_variant(
         written.append(Artifact(variant.name, "html", path))
 
     if "pdf" in formats:
-        path = out_dir / f"resume-{variant.name}.pdf"
-        footer = render_print_footer(
-            data, theme=theme, variant=variant.name, stamp=stamp, style=variant.style
+        path = out_dir / pdf_filename(
+            data.get("basics", {}).get("name", ""), variant.name, primary_variant
         )
-        html_to_pdf(html, path, footer)
+        footer = render_print_footer(
+            data, theme=theme, variant=label, stamp=stamp, style=variant.style
+        )
+        html_to_pdf(html, path, footer, metadata=document_metadata(data))
         written.append(Artifact(variant.name, "pdf", path))
 
     if "json" in formats:
@@ -74,7 +78,7 @@ def build_variant(
         written.append(Artifact(variant.name, "json", path))
 
     if "md" in formats:
-        md = render_markdown(data, theme=theme, variant=variant.name, stamp=stamp)
+        md = render_markdown(data, theme=theme, variant=label, stamp=stamp)
         path = out_dir / f"resume-{variant.name}.md"
         path.write_text(md, encoding="utf-8")
         written.append(Artifact(variant.name, "md", path))

@@ -93,7 +93,9 @@ def build(
     resume = _load_or_exit()
 
     try:
-        targets = [get_variant(variant)] if variant else list(load_variants().values())
+        variants = load_variants()
+        targets = [get_variant(variant)] if variant else list(variants.values())
+        primary = next((v.name for v in variants.values() if v.publish), None)
     except (UnknownVariant, ValueError) as exc:
         typer.echo(f"{err}: {exc}")
         raise typer.Exit(2) from None
@@ -105,7 +107,12 @@ def build(
     try:
         for target in targets:
             for artifact in build_variant(
-                resume, target, theme=theme, formats=formats, out_dir=out
+                resume,
+                target,
+                theme=theme,
+                formats=formats,
+                out_dir=out,
+                primary_variant=primary,
             ):
                 size = artifact.path.stat().st_size
                 typer.echo(f"{ok}: {artifact.path} ({size / 1024:.0f} KB)")

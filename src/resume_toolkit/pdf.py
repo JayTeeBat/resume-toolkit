@@ -2,12 +2,52 @@
 
 from __future__ import annotations
 
+import re
 import tempfile
+import unicodedata
 from collections.abc import Generator
 from contextlib import contextmanager
+from io import BytesIO
 from pathlib import Path
 
 from playwright.sync_api import Browser, Page, sync_playwright
+from pypdf import PdfWriter
+
+
+def pdf_filename(name: str, variant: str, primary_variant: str | None = None) -> str:
+    """A portable, self-identifying filename; only the primary cut omits its name."""
+    folded = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
+    slug = re.sub(r"[^A-Za-z0-9-]", "", "-".join(folded.split()))
+    if not slug:
+        raise ValueError("basics.name must produce a nonempty ASCII PDF filename")
+    suffix = (
+        ""
+        if variant == primary_variant
+        else "-" + "-".join(part.title() for part in variant.split("-"))
+    )
+    return f"{slug}-Resume{suffix}.pdf"
+
+
+def document_metadata(resume: dict) -> dict[str, str]:
+    """Metadata from the rendered cut, never from unfiltered source content."""
+    basics = resume.get("basics") or {}
+    keywords = dict.fromkeys(
+        keyword
+        for skill in resume.get("skills") or []
+        for keyword in skill.get("keywords") or []
+    )
+    return {
+        "/Author": basics.get("name", ""),
+        "/Subject": basics.get("label", ""),
+        "/Keywords": ", ".join(keywords),
+    }
+
+
+def write_metadata(path: Path, metadata: dict[str, str]) -> None:
+    """Keep Chromium's title, dates and page content; add no generated IDs."""
+    writer = PdfWriter(clone_from=BytesIO(path.read_bytes()))
+    writer.add_metadata(metadata)
+    writer.write(path)
 
 
 class BrowserMissing(Exception):
@@ -72,7 +112,13 @@ def print_page(page: Page, out: Path, footer: str | None = None) -> Path:
     return out
 
 
-def html_to_pdf(html: str, out: Path, footer: str | None = None) -> Path:
+def html_to_pdf(
+    html: str,
+    out: Path,
+    footer: str | None = None,
+    *,
+    metadata: dict[str, str] | None = None,
+) -> Path:
     out.parent.mkdir(parents=True, exist_ok=True)
 
     # Write the HTML to a real file and navigate to it, rather than using
@@ -85,4 +131,6 @@ def html_to_pdf(html: str, out: Path, footer: str | None = None) -> Path:
         with chromium() as browser:
             print_page(open_page(browser, page_file), out, footer)
 
+    if metadata is not None:
+        write_metadata(out, metadata)
     return out

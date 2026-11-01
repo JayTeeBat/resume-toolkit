@@ -395,7 +395,8 @@ def test_print_footer_is_optional_for_a_theme(tmp_path, monkeypatch) -> None:
     assert render_print_footer({}, theme="plain") is None
 
 
-def test_screen_colophon_is_the_print_footer_without_page_numbers() -> None:
+@pytest.mark.parametrize("variant", [None, "2-page"])
+def test_screen_colophon_is_the_print_footer_without_page_numbers(variant) -> None:
     """One row on screen and in print: same fields, separators and order."""
     resume = {**PROFILED, "meta": {"canonical": "https://example.com/cv/"}}
     stamp = Stamp(
@@ -404,8 +405,8 @@ def test_screen_colophon_is_the_print_footer_without_page_numbers() -> None:
         dirty=False,
         label="2026-07-16 · rev 942700c",
     )
-    footer = render_print_footer(resume, variant="2-page", stamp=stamp)
-    html = render_html(resume, variant="2-page", stamp=stamp)
+    footer = render_print_footer(resume, variant=variant, stamp=stamp)
+    html = render_html(resume, variant=variant, stamp=stamp)
 
     def row(document: str, start: str) -> str:
         body = document[document.index(start) :]

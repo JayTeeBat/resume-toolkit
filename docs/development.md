@@ -16,7 +16,7 @@ from this checkout's `examples/`).
 
 ```sh
 uv run resume serve                  # preview at localhost:8000, reloads as you edit
-uv run resume build                  # -> dist/resume-{full,short}.{pdf,html,json,md}
+uv run resume build                  # render every variant to dist/
 ```
 
 `serve` is the one to use while writing or restyling: leave it running, edit
@@ -33,7 +33,7 @@ uv run resume build                  # -> dist/resume-{full,short}.{pdf,html,jso
 | `uv run resume variants` | List the variants defined in `variants.toml` |
 | `uv run resume build` | Render every variant to `dist/` |
 | `uv run resume build -v short -f pdf` | Render one variant, one format |
-| `uv run resume site` | Every variant **plus** the `index.html` landing page — what CI publishes |
+| `uv run resume site` | Every published variant **plus** the `index.html` landing page — what CI publishes |
 | `uv run resume serve` | Browser preview, live-reloads on edit |
 
 To see exactly what the published site will look like, `uv run resume site` and open
@@ -46,7 +46,7 @@ resume.json ──validate (schema)──> apply variant (x-tags) ──> Jinja2
                                                                                   │
                                                                      Chromium print-to-PDF
                                                                                   ↓
-                                                                        dist/resume-*.pdf
+                                                                        dist/<Name>-Resume*.pdf
 ```
 
 - **Content** lives in `resume.json`. Nothing else should carry CV facts.
@@ -135,7 +135,9 @@ The first published variant in `variants.toml` is the primary cut: the index
 shows it first and most prominently, and the canonical `resume.json` alias and
 `llms.txt` point at it. Further published variants follow it on the index as
 alternatives, in file order, with the same HTML, PDF, JSON and Markdown actions.
-Reorder `variants.toml` to change the primary cut.
+Reorder `variants.toml` to change the primary cut. Its PDF footer and HTML/Markdown
+colophons omit the version label; every other cut keeps it. This applies to both
+`resume build` and `resume site`. With no published variant, all labels remain.
 
 Besides variant artifacts, the site includes `index.html`, a canonical `resume.json`
 alias, `llms.txt`, `404.html`, `robots.txt` and a sitemap when `meta.canonical` is set.
@@ -147,13 +149,30 @@ CalVer with the hash as SemVer build metadata, `2026.10.31+39140c4`. A build
 with uncommitted edits to `resume.json` is dated today and reads
 `2026-10-31 · rev 39140c4 (modified)` and `2026.10.31+39140c4.dirty`.
 
+PDF filenames identify the person: `<Name>-Resume.pdf` for the primary cut,
+`<Name>-Resume-<Variant>.pdf` for every other cut (including private builds).
+`Name` comes from `basics.name`: ASCII-fold accents, join whitespace-separated
+words with `-`, then drop characters outside `[A-Za-z0-9-]`. An empty result
+fails the build. Variant parts are title-cased (`one-page` becomes `One-Page`).
+`resume build -v` uses the same primary cut as the site; with no published
+variants, every PDF includes its variant suffix. HTML, JSON and Markdown keep
+`resume-<variant>.*`, and `/resume.json` remains the primary JSON alias.
+Old PDF URLs have no redirects. The sitemap continues to list HTML pages only.
+
+The classic HTML title and PDF Title are `<basics.name> — Resume`. PDF Author
+is `basics.name`, Subject is `basics.label`, and Keywords are the filtered cut's
+skill keywords, deduplicated in original order and separated by commas.
+Post-processing with pypdf preserves Chromium's title, dates and page content;
+it adds no timestamps, generated IDs or hidden body text. Custom themes retain
+their own HTML title as the PDF Title.
+
 ## PDF pages
 
 The classic theme keeps every company on one page; a company taller than a
 page breaks between roles, never inside one. The `page_breaks` check verifies
 this on the PDF. Every PDF page carries the same footer, on one line across
-the page width: four fields at equal gaps from margin to margin, a `·` centred
-in each gap, the variant label (`One-Page Version`), the build stamp
+the page width: fields at equal gaps from margin to margin, a `·` centred
+in each gap, the variant label (`One-Page Version`) for non-primary cuts, the build stamp
 (`2026-10-31 · rev 39140c4`), the canonical address (a link) and the page
 number (`1 / 2`). The screen HTML closes with the same row, same type and
 colour, minus the page number. Chromium

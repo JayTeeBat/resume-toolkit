@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- `verb_led` and `tense` recognise more common present-tense CV verbs:
+  Analyse, Analyze, Configure, Coordinate, Deploy, Design, Integrate, Mentor,
+  Migrate, Model, Monitor, Operate, Optimise, Optimize, Simulate, Support,
+  Test, Train and Validate. "Configure …" no longer fails `verb_led`.
+
+### Added
+
+- Optional top-level `extra_verbs = []` extends the built-in present-tense
+  verbs for both `verb_led` and `tense`; entries must be single capitalised
+  words.
+
 ## 0.4.0 - 2026-11-01
 
 ### Added

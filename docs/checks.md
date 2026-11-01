@@ -27,10 +27,10 @@ override can change every violation of a rule (see below). Minimal policy: an em
 | `proper_names` | `proper_names = {}`; mapping from incorrect to correct casing |
 | `typography` | No double/edge spaces, spaced hyphens, ASCII multiplication or trailing currency symbols |
 | `unit_spacing` | Built-in unit symbols require whitespace after numbers (`10 kWh`, `±3 %`, `25 °C`), per the [SI Brochure, 9th edition (2019)](https://www.bipm.org/en/publications/si-brochure) §5.4.3 and §5.4.7; the list in `checks/language.py` is SI, accepted-for-use and common battery units, curated rather than exhaustive |
-| `tense` | Built-in English verb lists; current role present, ended role past |
+| `tense` | `extra_verbs = []` extends built-in present verbs; current role present, ended role past |
 | `skill_evidence` | `skill_evidence = {}`; soft evidence coverage in summaries/highlights after filtering; aliases and exemptions supported |
 | `weak_phrases` | `weak_phrases = { hard = [...], soft = [...] }`; built-in phrases below, each supplied list replaces its default |
-| `verb_led` | Highlights start with a recognized present/past verb or an `-ed` word |
+| `verb_led` | Highlights start with a recognized present/past verb or an `-ed` word; `extra_verbs = []` extends present verbs |
 | `quantified` | At least one digit in each published work entry's summary/highlights |
 | `lengths` | `summary_sentences = 1`, `summary_soft_max = 25`, `summary_hard_max = 30`; minimum 1 word |
 | `lengths` | `highlight_soft_range = [10, 30]`, `highlight_hard_range = [3, 40]`; whitespace-separated words |
@@ -194,3 +194,14 @@ including both levels emitted by `lengths` or `weak_phrases` and stale entries
 from `skill_evidence`. JSON `severity` reflects the override. `--strict` still
 fails on soft warnings without changing their reported severity. Configuration
 errors remain errors and cannot be softened.
+
+### Extra present verbs
+
+At the top level, `extra_verbs = ["Orchestrate"]` adds present-tense verbs to
+both `verb_led` and `tense` without replacing the built-in vocabulary. Entries
+must be non-empty ASCII alphabetic single words starting with an uppercase
+letter; whitespace, digits and punctuation are rejected. The default is `[]`.
+Use base present forms: configured verbs pass for current roles and are flagged
+for ended roles. Regular past forms still use the `-ed` heuristic, and built-in
+irregular past forms remain accepted. Unknown words still fail `verb_led`;
+`tense` only judges recognised forms, including summaries.

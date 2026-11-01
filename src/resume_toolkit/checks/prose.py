@@ -127,7 +127,7 @@ def tense(
         ]
         for where, text in texts:
             word = first_word(text)
-            present, past = looks_present(word), looks_past(word)
+            present, past = looks_present(word, config.extra_verbs), looks_past(word)
             if current and past and not present:
                 violations.append(
                     Violation(
@@ -154,7 +154,7 @@ def verb_led(
     """A bullet states what was done, so it opens on a verb the tense lists
     recognise: "Characterised the layers", not "Characterisation of the
     layers". A genuine verb missing from the lists belongs in PRESENT_VERBS
-    or IRREGULAR_PAST, not in an exception here.
+    or IRREGULAR_PAST; domain-specific present verbs can use extra_verbs.
     """
     violations = []
     for i, entry in enumerate(resume.get("work", [])):
@@ -163,7 +163,7 @@ def verb_led(
         )
         for j, text in enumerate(entry.get("highlights", [])):
             word = first_word(text)
-            if not (looks_present(word) or looks_past(word)):
+            if not (looks_present(word, config.extra_verbs) or looks_past(word)):
                 violations.append(
                     Violation(
                         f"$.work[{i}].highlights[{j}]  ({entry_label(entry)})",

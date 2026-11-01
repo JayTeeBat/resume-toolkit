@@ -220,3 +220,55 @@ def test_legacy_zero_minimum_since_retains_survival_requirement():
     )
     assert len(failures) == 1
     assert "x-tags" in failures[0].where
+
+
+@pytest.mark.parametrize(
+    ("present", "past"),
+    [
+        ("Analyse", "Analysed"),
+        ("Analyze", "Analyzed"),
+        ("Configure", "Configured"),
+        ("Deploy", "Deployed"),
+        ("Design", "Designed"),
+        ("Integrate", "Integrated"),
+        ("Migrate", "Migrated"),
+        ("Mentor", "Mentored"),
+        ("Monitor", "Monitored"),
+        ("Operate", "Operated"),
+        ("Optimise", "Optimised"),
+        ("Optimize", "Optimized"),
+        ("Test", "Tested"),
+        ("Validate", "Validated"),
+        ("Coordinate", "Coordinated"),
+        ("Model", "Modelled"),
+        ("Model", "Modeled"),
+        ("Simulate", "Simulated"),
+        ("Support", "Supported"),
+        ("Train", "Trained"),
+        ("Orchestrate", "Orchestrated"),
+    ],
+)
+def test_present_and_past_verbs_are_coherent(tmp_path, present, past):
+    path = tmp_path / "checks.toml"
+    path.write_text('enabled = ["verb_led", "tense"]\nextra_verbs = ["Orchestrate"]')
+    config = load_config(path)
+    for word, current in [(present, True), (past, False)]:
+        role = {"summary": f"{word} systems.", "highlights": [f"{word} systems."]}
+        if not current:
+            role["endDate"] = "2020-01"
+        assert run_checks({"work": [role]}, config, CUTS, fast=True) == []
+        if current:
+            role["endDate"] = "2020-01"
+        else:
+            del role["endDate"]
+        failures = run_checks({"work": [role]}, config, CUTS, fast=True)
+        assert len(failures) == 2
+        assert all(v.rule == "tense" for v in failures)
+    unknown = {"work": [{"highlights": ["Wibble systems."]}]}
+    assert [v.rule for v in run_checks(unknown, config, CUTS, fast=True)] == [
+        "verb_led"
+    ]
+    # Extensions are local to the policy, not mutations of the built-in set.
+    assert check(
+        {"work": [{"highlights": ["Orchestrate systems."]}]}, enabled=["verb_led"]
+    )

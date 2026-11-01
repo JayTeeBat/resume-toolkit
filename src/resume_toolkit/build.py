@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .paths import DIST_DIR
-from .pdf import html_to_pdf
+from .pdf import document_metadata, html_to_pdf, pdf_filename
 from .render import render_html, render_markdown, render_print_footer
 from .variants import Variant, apply_variant
 from .version import build_stamp
@@ -25,6 +25,7 @@ def build_variant(
     variant: Variant,
     *,
     theme: str = "classic",
+    primary_variant: str | None = None,
     formats: tuple[str, ...] = ("pdf", "html"),
     out_dir: Path = DIST_DIR,
 ) -> list[Artifact]:
@@ -46,11 +47,13 @@ def build_variant(
         written.append(Artifact(variant.name, "html", path))
 
     if "pdf" in formats:
-        path = out_dir / f"resume-{variant.name}.pdf"
+        path = out_dir / pdf_filename(
+            data.get("basics", {}).get("name", ""), variant.name, primary_variant
+        )
         footer = render_print_footer(
             data, theme=theme, variant=variant.name, stamp=stamp, style=variant.style
         )
-        html_to_pdf(html, path, footer)
+        html_to_pdf(html, path, footer, metadata=document_metadata(data))
         written.append(Artifact(variant.name, "pdf", path))
 
     if "json" in formats:

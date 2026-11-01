@@ -239,3 +239,35 @@ def test_pdf_repeats_one_footer_with_page_numbers_on_every_page(
     # Body text is laid out once: the footer adds no second copy of anything.
     assert text.count(resume["basics"]["name"]) == 1
     assert text.count("Example College") == 1
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize(
+    ("name", "keywords"),
+    [("short", "Python, SQL, Rust"), ("full", "Python, SQL, Rust, Kubernetes")],
+)
+def test_pdf_metadata_uses_the_filtered_cut(resume, tmp_path, name, keywords) -> None:
+    from pypdf import PdfReader
+
+    resume["skills"] = [
+        {"name": "Core", "keywords": ["Python", "SQL", "Python"]},
+        {"name": "Delivery", "keywords": ["Rust", "SQL"]},
+        {"name": "Specialist", "keywords": ["Kubernetes"], "x-tags": ["full"]},
+    ]
+    written = build_variant(
+        resume,
+        get_variant(name, FIXTURES / "variants.toml"),
+        formats=("pdf", "html"),
+        out_dir=tmp_path,
+        primary_variant="short",
+    )
+    pdf = next(a.path for a in written if a.fmt == "pdf")
+    html = next(a.path.read_text() for a in written if a.fmt == "html")
+    metadata = PdfReader(pdf).metadata
+    assert metadata is not None
+    title = f"{resume['basics']['name']} — Resume"
+    assert f"<title>{title}</title>" in html
+    assert metadata.title == title
+    assert metadata.author == resume["basics"]["name"]
+    assert metadata.subject == resume["basics"]["label"]
+    assert metadata["/Keywords"] == keywords

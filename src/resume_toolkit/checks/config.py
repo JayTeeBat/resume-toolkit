@@ -5,7 +5,9 @@ from __future__ import annotations
 import re
 import tomllib
 from dataclasses import dataclass, field, fields
+from itertools import combinations
 from pathlib import Path
+from typing import Literal
 
 from ..variants import Variant
 
@@ -17,6 +19,8 @@ RULES = (
     "unit_spacing",
     "tense",
     "verb_led",
+    "weak_phrases",
+    "skill_evidence",
     "quantified",
     "lengths",
     "highlights",
@@ -39,16 +43,55 @@ RULES = (
 #: Rules that print or lay out the CV in Chromium; `--fast` skips them.
 BROWSER_RULES = frozenset({"page_budget", "header", "page_breaks"})
 #: Rules that check each published cut rather than the whole document.
-VARIANT_RULES = BROWSER_RULES | {"quantified", "required_sections", "role_highlights"}
+VARIANT_RULES = BROWSER_RULES | {
+    "quantified",
+    "required_sections",
+    "role_highlights",
+    "skill_evidence",
+    "weak_phrases",
+}
 
 
 class ConfigError(ValueError):
     """Invalid resume-checks.toml or incompatible variant selection."""
 
 
+Band = dict[str, int | str]
+
+
+@dataclass(frozen=True)
+class SkillEvidence:
+    aliases: dict[str, list[str]] = field(default_factory=dict)
+    exempt: list[str] = field(default_factory=list)
+
+
 @dataclass(frozen=True)
 class CheckConfig:
     enabled: list[str] = field(default_factory=lambda: list(RULES))
+    severity: dict[str, Literal["hard", "soft"]] = field(default_factory=dict)
+    skill_evidence: SkillEvidence = field(default_factory=SkillEvidence)
+    weak_phrases: dict[str, list[str]] = field(
+        default_factory=lambda: {
+            "hard": [
+                "helped",
+                "worked on",
+                "assisted",
+                "responsible for",
+                "was involved in",
+            ],
+            "soft": [
+                "leveraged",
+                "leverage",
+                "synergy",
+                "synergies",
+                "robust",
+                "scalable",
+                "cutting-edge",
+                "we",
+                "our",
+            ],
+        }
+    )
     spelling: str = "none"
     proper_names: dict[str, str] = field(default_factory=dict)
     published_variants: list[str] = field(default_factory=list)
@@ -63,7 +106,7 @@ class CheckConfig:
     shared_skill_keywords: list[str] = field(default_factory=list)
     required_fields: dict[str, list[str]] = field(default_factory=dict)
     required_sections: dict[str, list[str]] = field(default_factory=dict)
-    role_highlights: dict[str, dict[str, int | str]] = field(default_factory=dict)
+    role_highlights: dict[str, Band | list[Band]] = field(default_factory=dict)
     date_format: str = "YYYY-MM"
     summary_sentences: int = 1
     summary_soft_max: int = 25
@@ -85,6 +128,12 @@ def date_pattern(fmt: str) -> re.Pattern[str]:
     return re.compile(patterns[fmt])
 
 
+def string_list(value: object) -> bool:
+    return isinstance(value, list) and all(
+        isinstance(v, str) and v.strip() for v in value
+    )
+
+
 def load_config(path: Path = Path("resume-checks.toml")) -> CheckConfig:
     """A missing file selects defaults; an existing file is validated strictly."""
     try:
@@ -101,7 +150,7 @@ def load_config(path: Path = Path("resume-checks.toml")) -> CheckConfig:
     if unknown := raw.keys() - known:
         raise ConfigError(f"unknown checks key(s): {', '.join(sorted(unknown))}")
     for key, value in raw.items():
-        default = getattr(defaults, key)
+        default = {} if key == "skill_evidence" else getattr(defaults, key)
         if key == "page_budget" and isinstance(value, dict):
             if not value or any(type(v) is not int or v <= 0 for v in value.values()):
                 raise ConfigError(
@@ -142,22 +191,80 @@ def load_config(path: Path = Path("resume-checks.toml")) -> CheckConfig:
                 "variant_exemptions: expected variant = [rule names] among "
                 + ", ".join(sorted(VARIANT_RULES))
             )
-    for name, policy in raw.get("role_highlights", {}).items():
-        if (
-            not isinstance(policy, dict)
-            or policy.keys() - {"min", "since"}
-            or type(policy.get("min")) is not int
-            or policy["min"] < 0
-        ):
+    for name, value in raw.get("severity", {}).items():
+        if name not in RULES:
             raise ConfigError(
-                f"role_highlights.{name}: expected min = nonnegative integer "
-                "and optional since = YYYY-MM"
+                f"severity: unknown rule {name!r}; valid rules: {', '.join(RULES)}"
             )
-        if "since" in policy and (
-            not isinstance(policy["since"], str)
-            or not date_pattern("YYYY-MM").fullmatch(policy["since"])
-        ):
-            raise ConfigError(f"role_highlights.{name}.since: write YYYY-MM")
+        if value not in ("hard", "soft"):
+            raise ConfigError(f"severity.{name}: choose hard or soft")
+    evidence = raw.get("skill_evidence", {})
+    if evidence.keys() - {"aliases", "exempt"}:
+        raise ConfigError("skill_evidence: expected aliases and/or exempt")
+    aliases = evidence.get("aliases", {})
+    if not isinstance(aliases, dict) or any(
+        not k.strip() or not string_list(v) for k, v in aliases.items()
+    ):
+        raise ConfigError(
+            "skill_evidence.aliases: expected keyword = [non-empty strings]"
+        )
+    if not string_list(evidence.get("exempt", [])):
+        raise ConfigError("skill_evidence.exempt: expected a list of non-empty strings")
+    raw["skill_evidence"] = SkillEvidence(**evidence)
+    phrases = raw.get("weak_phrases", {})
+    if phrases.keys() - {"hard", "soft"} or any(
+        not string_list(v) for v in phrases.values()
+    ):
+        raise ConfigError(
+            "weak_phrases: expected hard and/or soft = [non-empty strings]"
+        )
+    phrases = defaults.weak_phrases | phrases
+    overlap = {p.casefold() for p in phrases["hard"]} & {
+        p.casefold() for p in phrases["soft"]
+    }
+    if overlap:
+        raise ConfigError(
+            f"weak_phrases: phrases in both hard and soft: {', '.join(sorted(overlap))}"
+        )
+    raw["weak_phrases"] = phrases
+    for name, policy in raw.get("role_highlights", {}).items():
+        bands = policy if isinstance(policy, list) else [policy]
+        if not bands:
+            raise ConfigError(f"role_highlights.{name}: expected at least one band")
+        for i, band in enumerate(bands):
+            where = f"role_highlights.{name}[{i}]"
+            if (
+                not isinstance(band, dict)
+                or band.keys() - {"min", "max", "since", "before"}
+                or not band.keys() & {"min", "max"}
+                or any(
+                    type(band[k]) is not int or band[k] < 0
+                    for k in ("min", "max")
+                    if k in band
+                )
+            ):
+                raise ConfigError(
+                    f"{where}: expected min and/or max = nonnegative integer, "
+                    "optional since/before = YYYY-MM"
+                )
+            if "min" in band and "max" in band and band["min"] > band["max"]:
+                raise ConfigError(f"{where}: min must not exceed max")
+            for key in ("since", "before"):
+                if key in band and (
+                    not isinstance(band[key], str)
+                    or not date_pattern("YYYY-MM").fullmatch(band[key])
+                ):
+                    raise ConfigError(f"{where}.{key}: write YYYY-MM")
+            if band.get("since", "") >= band.get("before", "9999-99"):
+                raise ConfigError(f"{where}: since must precede before")
+        for (i, left), (j, right) in combinations(enumerate(bands), 2):
+            if max(left.get("since", ""), right.get("since", "")) < min(
+                left.get("before", "9999-99"), right.get("before", "9999-99")
+            ):
+                raise ConfigError(
+                    f"role_highlights.{name}: bands [{i}] {left} "
+                    f"and [{j}] {right} overlap"
+                )
     gaps = {}
     for bounds, reason in raw.get("gap_allowlist", {}).items():
         parts = bounds.split("..")

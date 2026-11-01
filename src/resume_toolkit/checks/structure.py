@@ -345,44 +345,65 @@ def role_highlights(
         policy = config.role_highlights.get(variant.name)
         if policy is None:
             continue
-        minimum = int(policy["min"])
-        since = str(policy.get("since", ""))
-        for i, entry in enumerate(resume.get("work", [])):
-            if since and month_index(entry["startDate"]) < month_index(since):
-                continue
-            kept = apply_variant({"work": [entry]}, variant).get("work", [])
-            where = f"$.work[{i}] ({entry_label(entry)}; in {variant.name})"
-            if not kept:
-                if since:
+        legacy = isinstance(policy, dict)
+        bands = policy if isinstance(policy, list) else [policy]
+        for policy in bands:
+            minimum = int(policy.get("min", 0))
+            maximum = int(policy["max"]) if "max" in policy else None
+            before = str(policy.get("before", ""))
+            since = str(policy.get("since", ""))
+            for i, entry in enumerate(resume.get("work", [])):
+                if since and month_index(entry["startDate"]) < month_index(since):
+                    continue
+                if before and month_index(entry["startDate"]) >= month_index(before):
+                    continue
+                kept = apply_variant({"work": [entry]}, variant).get("work", [])
+                where = f"$.work[{i}] ({entry_label(entry)}; in {variant.name})"
+                if not kept:
+                    if since and (legacy or minimum >= 1):
+                        violations.append(
+                            Violation(
+                                where + ".x-tags",
+                                str(entry.get(TAG_KEY)),
+                                "remove these x-tags so this required role "
+                                "survives filtering",
+                            )
+                        )
+                    continue
+                count = sum(bool(h.strip()) for h in kept[0].get("highlights", []))
+                if maximum is not None and count > maximum:
+                    bullets = kept[0].get("highlights", [])
                     violations.append(
                         Violation(
-                            where + ".x-tags",
-                            str(entry.get(TAG_KEY)),
-                            "remove these x-tags so this required role "
-                            "survives filtering",
+                            where,
+                            f"{count} nonblank highlights after filtering; "
+                            f"maximum {maximum}",
+                            f"drop {count - maximum} nonblank highlights from this cut "
+                            "by changing "
+                            f"$.work[{i}].x-highlights for these surviving bullets: "
+                            + "; ".join(repr(h) for h in bullets if h.strip()),
                         )
                     )
-                continue
-            count = sum(bool(h.strip()) for h in kept[0].get("highlights", []))
-            if count >= minimum:
-                continue
-            dropped = [
-                f'$.work[{i}].x-highlights["{pattern}"]'
-                for pattern, tags in entry.get(HIGHLIGHT_TAG_KEY, {}).items()
-                if tags
-                and not variant.includes_everything
-                and not set(tags) & variant.include
-            ]
-            fix = (
-                "remove or change the tags in " + ", ".join(dropped)
-                if dropped
-                else f"add owner-confirmed bullets to $.work[{i}].highlights"
-            )
-            violations.append(
-                Violation(
-                    where,
-                    f"{count} nonblank highlights after filtering; minimum {minimum}",
-                    fix + f" so at least {minimum} nonblank highlights survive",
+                if count >= minimum:
+                    continue
+                dropped = [
+                    f'$.work[{i}].x-highlights["{pattern}"]'
+                    for pattern, tags in entry.get(HIGHLIGHT_TAG_KEY, {}).items()
+                    if tags
+                    and not variant.includes_everything
+                    and not set(tags) & variant.include
+                ]
+                fix = (
+                    "remove or change the tags in " + ", ".join(dropped)
+                    if dropped
+                    else f"add owner-confirmed bullets to $.work[{i}].highlights"
                 )
-            )
+                violations.append(
+                    Violation(
+                        where,
+                        f"{count} nonblank highlights after filtering; "
+                        f"minimum {minimum}",
+                        fix + f" so at least {minimum} nonblank highlights survive",
+                    )
+                )
     return finish("role_highlights", violations)

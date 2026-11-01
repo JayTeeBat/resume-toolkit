@@ -2,7 +2,19 @@
 
 ## [Unreleased]
 
-Planned for 0.3.0.
+## 0.4.0 (unreleased)
+
+### Added
+
+- Fast `skill_evidence` checks each filtered cut's skills against its summaries
+  and highlights, with aliases, exemptions and stale-entry diagnostics.
+- Fast `weak_phrases` reports hard/soft wording with replaceable phrase lists.
+- `role_highlights` accepts non-overlapping date bands with minimum and maximum
+  counts while retaining the single-table form.
+- Per-rule `severity` overrides force all findings to hard or soft, including
+  JSON output; strict mode continues to fail on soft warnings.
+
+## 0.3.0 (unreleased)
 
 ### Changed
 

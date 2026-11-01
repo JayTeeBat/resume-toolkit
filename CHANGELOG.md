@@ -14,7 +14,7 @@
 - Per-rule `severity` overrides force all findings to hard or soft, including
   JSON output; strict mode continues to fail on soft warnings.
 
-## 0.3.0 (unreleased)
+## 0.3.0 - 2026-11-01
 
 ### Changed
 

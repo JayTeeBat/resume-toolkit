@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-Planned for 0.3.0.
+## 0.3.0 - 2026-11-01
 
 ### Changed
 

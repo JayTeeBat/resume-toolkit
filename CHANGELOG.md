@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## 0.4.1 - 2026-11-02
+
 ### Fixed
 
 - `verb_led` and `tense` recognise more common present-tense CV verbs:

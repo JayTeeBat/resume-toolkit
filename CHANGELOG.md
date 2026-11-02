@@ -2,6 +2,23 @@
 
 ## [Unreleased]
 
+## 0.5.1 - 2026-11-02
+
+### Fixed
+
+- `resume_toolkit.__version__` reads the installed package metadata instead
+  of a stale hard-coded `0.1.0`.
+
+### Changed
+
+- CI runs `repo-check --strict`, so recommended findings fail compliance as
+  they already did in the pre-commit hook. The kit is pinned to the v2.0.0
+  commit in CI and pre-commit.
+- Workflows set job timeouts, `persist-credentials: false` and per-ref
+  concurrency; the quality job caches the Playwright Chromium download.
+- `actionlint` and `zizmor` (offline) lint the workflows as pre-commit hooks.
+- Dependabot opens one weekly PR covering GitHub Actions and uv together.
+
 ## 0.5.0 - 2026-11-02
 
 ### Changed

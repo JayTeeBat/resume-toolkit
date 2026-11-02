@@ -68,9 +68,22 @@ repos:
         entry: uv run pymarkdown --config .pymarkdown.json scan
         language: system
         types: [markdown]
+      - id: actionlint
+        name: actionlint
+        entry: uv run actionlint
+        language: system
+        files: ^\.github/workflows/
+      # Offline: audits that need the GitHub API would make the hook flaky.
+      - id: zizmor
+        name: zizmor
+        entry: uv run zizmor --offline .github/workflows
+        language: system
+        pass_filenames: false
+        files: ^\.github/workflows/
       - id: repo-check
         name: repository compliance
-        entry: uvx --from "git+https://github.com/JayTeeBat/repo-standard-kit.git@v2.0.0" repo-check --strict .
+        # Kit pinned to the v2.0.0 commit.
+        entry: uvx --from "git+https://github.com/JayTeeBat/repo-standard-kit.git@417aa92f1711fe8266622ef9dde797e0f40f2def" repo-check --strict .
         language: system
         pass_filenames: false
         always_run: true

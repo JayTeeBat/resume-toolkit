@@ -263,6 +263,7 @@ uv run pre-commit install
 ```
 
 The standard hooks check formatting, lint, types, Markdown, file hygiene,
-secrets and repository compliance. Example CLI tests cover content checks;
+secrets and repository compliance; `actionlint` and `zizmor` (offline) lint
+the workflows. Example CLI tests cover content checks;
 there is no repository-root CV hook. Run `uv run pre-commit run --all-files`
 to check the whole repository.

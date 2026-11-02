@@ -4,19 +4,29 @@ name: Compliance
 permissions:
   contents: read
 
+# A newer push to the same PR supersedes the running check.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   compliance:
     name: compliance
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up uv
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
 
+      # Inline rather than the kit's reusable workflow, which has no strict
+      # input (JayTeeBat/repo-standard-kit#4). Kit pinned to the v2.0.0 commit.
       - name: Check repository compliance
         run: >-
           uvx --from
-          "git+https://github.com/JayTeeBat/repo-standard-kit.git@v2.0.0"
-          repo-check .
+          "git+https://github.com/JayTeeBat/repo-standard-kit.git@417aa92f1711fe8266622ef9dde797e0f40f2def"
+          repo-check --strict .

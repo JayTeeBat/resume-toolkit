@@ -103,7 +103,7 @@ Omitting `formats` keeps all four: `pdf`, `html`, `json`, `md`. The value must
 be a non-empty list of strings from those values, without duplicates. Selection
 controls site files, landing-page buttons, PDF size, `llms.txt` links and HTML
 sitemap entries. The first published cut supplies `/resume.json` only when it
-includes `json`; otherwise the alias and its Machine-readable section are absent.
+includes `json`; otherwise that file and the Machine-readable section are absent.
 `resume build` still builds every format of every variant by default, including
 Markdown for private CI artifacts; `--format` remains its explicit selector.
 
@@ -151,15 +151,16 @@ what the CV says. The same goes for the Markdown, which exists for the places st
 go: ATS web forms, plain-text email, LLM prompts.
 
 The first published variant in `variants.toml` is the primary cut: the index
-shows it first and most prominently, and the canonical `resume.json` alias and
-`llms.txt` point at it when JSON is selected. Further published variants follow it on the index as
+shows it first and most prominently, it publishes at the unsuffixed addresses
+(`resume.html`, `resume.json`, `resume.md`), and `llms.txt` points at its
+`resume.json` when JSON is selected. Further published variants follow it on the index as
 alternatives, in file order, with their selected format actions.
 Reorder `variants.toml` to change the primary cut. Its PDF footer and HTML/Markdown
 colophons omit the version label; every other cut keeps it. This applies to both
 `resume build` and `resume site`. With no published variant, all labels remain.
 
-Besides variant artifacts, the site includes `index.html`, a canonical `resume.json`
-alias (when the primary publishes JSON), `llms.txt`, `404.html`, `robots.txt` and a sitemap when `meta.canonical` is set.
+Besides variant artifacts, the site includes `index.html`, `llms.txt`, `404.html`,
+`robots.txt` and a sitemap when `meta.canonical` is set.
 The source link and build provenance come from the content repository, not the
 installed toolkit. A directory without git history has no provenance stamp.
 Readers see the stamp as `2026-10-31 · rev 39140c4` in the PDF footer, the
@@ -168,15 +169,27 @@ CalVer with the hash as SemVer build metadata, `2026.10.31+39140c4`. A build
 with uncommitted edits to `resume.json` is dated today and reads
 `2026-10-31 · rev 39140c4 (modified)` and `2026.10.31+39140c4.dirty`.
 
-PDF filenames identify the person: `<Name>-Resume.pdf` for the primary cut,
-`<Name>-Resume-<Variant>.pdf` for every other cut (including private builds).
+One naming rule covers every output, in `resume build` and `resume site` alike:
+
+| Format | Primary cut | Every other cut |
+| --- | --- | --- |
+| HTML | `resume.html` | `resume-<variant>.html` |
+| JSON | `resume.json` | `resume-<variant>.json` |
+| Markdown | `resume.md` | `resume-<variant>.md` |
+| PDF | `<Name>-Resume.pdf` | `<Name>-Resume-<Variant>.pdf` |
+
+The primary's addresses never name its variant, so they survive renaming or
+replacing the variant behind them; `resume.json` is also the filename the JSON
+Resume ecosystem expects. Other cuts, including private builds, keep the suffix.
+PDF filenames identify the person.
 `Name` comes from `basics.name`: ASCII-fold accents, join whitespace-separated
 words with `-`, then drop characters outside `[A-Za-z0-9-]`. An empty result
 fails the build. Variant parts are title-cased (`one-page` becomes `One-Page`).
 `resume build -v` uses the same primary cut as the site; with no published
-variants, every PDF includes its variant suffix. HTML, JSON and Markdown keep
-`resume-<variant>.*`, and `/resume.json` is the primary JSON alias when selected.
-Old PDF URLs have no redirects. The sitemap continues to list HTML pages only.
+variants, nothing is primary and every file includes its variant suffix.
+Changing the primary cut moves the unsuffixed addresses to the new one. Old URLs
+have no redirects: 404.html routes them back to the index. The sitemap lists
+HTML pages only.
 
 The site titles, classic HTML title and PDF Title are `<basics.name> — Resume`. PDF Author
 is `basics.name`, Subject is `basics.label`, and Keywords are the filtered cut's

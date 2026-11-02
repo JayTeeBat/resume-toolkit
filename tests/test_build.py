@@ -12,12 +12,55 @@ from dataclasses import replace
 import pytest
 from conftest import FIXTURES
 
-from resume_toolkit.build import build_variant
+from resume_toolkit.build import artifact_filename, build_variant
 from resume_toolkit.model import validate
 from resume_toolkit.pdf import BrowserMissing
 from resume_toolkit.variants import get_variant
 
 A4_MM = (210, 297)
+
+
+@pytest.mark.parametrize(
+    ("fmt", "variant", "primary", "expected"),
+    [
+        ("html", "2-page", "2-page", "resume.html"),
+        ("json", "2-page", "2-page", "resume.json"),
+        ("md", "2-page", "2-page", "resume.md"),
+        ("pdf", "2-page", "2-page", "Alex-Morgan-Resume.pdf"),
+        ("html", "full", "2-page", "resume-full.html"),
+        ("json", "full", "2-page", "resume-full.json"),
+        ("md", "full", "2-page", "resume-full.md"),
+        ("pdf", "full", "2-page", "Alex-Morgan-Resume-Full.pdf"),
+        ("html", "2-page", None, "resume-2-page.html"),
+        ("json", "2-page", None, "resume-2-page.json"),
+        ("md", "2-page", None, "resume-2-page.md"),
+        ("pdf", "2-page", None, "Alex-Morgan-Resume-2-Page.pdf"),
+    ],
+)
+def test_primary_cut_is_unsuffixed_in_every_format(
+    fmt, variant, primary, expected
+) -> None:
+    assert artifact_filename(fmt, "Alex Morgan", variant, primary) == expected
+
+
+def test_build_writes_the_primary_cut_at_unsuffixed_names(resume, tmp_path) -> None:
+    variants = FIXTURES / "variants.toml"
+    for name in ("short", "full"):
+        build_variant(
+            resume,
+            get_variant(name, variants),
+            formats=("html", "json", "md"),
+            primary_variant="short",
+            out_dir=tmp_path,
+        )
+    assert sorted(p.name for p in tmp_path.iterdir()) == [
+        "resume-full.html",
+        "resume-full.json",
+        "resume-full.md",
+        "resume.html",
+        "resume.json",
+        "resume.md",
+    ]
 
 
 def test_html_build_is_self_contained(resume, tmp_path) -> None:

@@ -14,7 +14,8 @@ from conftest import FIXTURES
 from markupsafe import escape
 
 from resume_toolkit import site as site_mod
-from resume_toolkit.pdf import BrowserMissing, pdf_filename
+from resume_toolkit.build import artifact_filename
+from resume_toolkit.pdf import BrowserMissing
 from resume_toolkit.site import build_site
 from resume_toolkit.variants import Variant, load_variants
 
@@ -25,6 +26,11 @@ def _published() -> list[str]:
         for name, v in load_variants(FIXTURES / "variants.toml").items()
         if v.publish
     ]
+
+
+def _filename(resume: dict, variant: str, fmt: str) -> str:
+    """The site's name for one artifact of the fixture's variants."""
+    return artifact_filename(fmt, resume["basics"]["name"], variant, _published()[0])
 
 
 def _unpublished() -> list[str]:
@@ -63,16 +69,16 @@ def test_index_prioritises_html_and_opens_pdf_in_a_browser(resume) -> None:
     card = {
         "name": "short",
         "description": "Published CV",
-        "html": "resume-short.html",
+        "html": "resume.html",
         "pdf": "Alex-Morgan-Resume.pdf",
-        "json": "resume-short.json",
-        "md": "resume-short.md",
+        "json": "resume.json",
+        "md": "resume.md",
         "size": "42 KB",
     }
 
     index = site_mod._render_index(resume, [card])
 
-    assert '<a class="btn primary" href="resume-short.html">HTML</a>' in index
+    assert '<a class="btn primary" href="resume.html">HTML</a>' in index
     assert (
         '<a class="btn" href="Alex-Morgan-Resume.pdf" '
         'target="_blank" rel="noopener">PDF</a>' in index
@@ -88,10 +94,10 @@ def _cards(*names: str) -> list[dict]:
         {
             "name": name,
             "description": f"The {name} cut",
-            "html": f"resume-{name}.html",
-            "pdf": pdf_filename("Alex Morgan", name, names[0]),
-            "json": f"resume-{name}.json",
-            "md": f"resume-{name}.md",
+            **{
+                fmt: artifact_filename(fmt, "Alex Morgan", name, names[0])
+                for fmt in ("html", "pdf", "json", "md")
+            },
             "size": "42 KB",
         }
         for name in names
@@ -135,7 +141,7 @@ def test_llms_txt_names_the_primary_cut_and_lists_every_cut(resume) -> None:
 
     assert "primary published cut (one-page)" in llms
     for name in ("one-page", "2-page", "full"):
-        assert pdf_filename("Alex Morgan", name, "one-page") in llms
+        assert artifact_filename("pdf", "Alex Morgan", name, "one-page") in llms
         assert f"The {name} cut" in llms
 
 
@@ -147,11 +153,7 @@ def test_site_builds_an_index_and_every_published_variant(built, resume) -> None
     assert "index.html" in names
     for variant in _published():
         for fmt in ("pdf", "html", "json", "md"):
-            target = (
-                pdf_filename(resume["basics"]["name"], variant, _published()[0])
-                if fmt == "pdf"
-                else f"resume-{variant}.{fmt}"
-            )
+            target = _filename(resume, variant, fmt)
             assert target in names
 
 
@@ -163,11 +165,7 @@ def test_unpublished_variants_never_reach_the_site(built, resume) -> None:
 
     for variant in _unpublished():
         for fmt in ("pdf", "html", "json", "md"):
-            target = (
-                pdf_filename(resume["basics"]["name"], variant, _published()[0])
-                if fmt == "pdf"
-                else f"resume-{variant}.{fmt}"
-            )
+            target = _filename(resume, variant, fmt)
             assert target not in names
             assert not (out / target).exists()
 
@@ -180,11 +178,7 @@ def test_index_links_resolve_to_files_that_exist(built, resume) -> None:
 
     for variant in _published():
         for fmt in ("pdf", "html", "json", "md"):
-            target = (
-                pdf_filename(resume["basics"]["name"], variant, _published()[0])
-                if fmt == "pdf"
-                else f"resume-{variant}.{fmt}"
-            )
+            target = _filename(resume, variant, fmt)
             assert f'href="{target}"' in index, f"index.html does not link {target}"
             assert (out / target).is_file()
             if fmt == "pdf":
@@ -205,15 +199,38 @@ def test_index_carries_real_identity(built, resume) -> None:
 
 
 @pytest.mark.slow
-def test_canonical_resume_json_alias_matches_the_primary_cut(built) -> None:
-    """/resume.json is the guessable machine address. Byte-identical to the
-    primary published cut, so the alias and the named file can never drift."""
+def test_primary_cut_publishes_at_the_unsuffixed_addresses(built) -> None:
+    """/resume.json and friends are the primary cut itself, not alias copies:
+    one file per artifact, so nothing can drift, and no URL names the variant."""
     written, out = built
     primary = _published()[0]
-    alias = out / "resume.json"
 
-    assert alias.is_file()
-    assert alias.read_bytes() == (out / f"resume-{primary}.json").read_bytes()
+    for fmt in ("html", "json", "md"):
+        assert (out / f"resume.{fmt}").is_file()
+        assert not (out / f"resume-{primary}.{fmt}").exists()
+    paths = [a.path for a in written]
+    assert len(paths) == len(set(paths)), "an artifact was written twice"
+    published = json.loads((out / "resume.json").read_text(encoding="utf-8"))
+    assert published["basics"]["name"]
+
+
+@pytest.mark.slow
+def test_every_link_on_the_front_matter_resolves(built, resume) -> None:
+    """index.html, llms.txt and sitemap.xml all point at files that exist."""
+    written, out = built
+    base = resume["meta"]["canonical"].rstrip("/") + "/"
+    index = (out / "index.html").read_text(encoding="utf-8")
+    llms = (out / "llms.txt").read_text(encoding="utf-8")
+    sitemap = (out / "sitemap.xml").read_text(encoding="utf-8")
+
+    links = re.findall(r'class="btn[^"]*" href="([^"]+)"', index)
+    links += [u.removeprefix(base) for u in re.findall(r"\]\(([^)]+)\)", llms)]
+    links += [u.removeprefix(base) for u in re.findall(r"<loc>([^<]+)</loc>", sitemap)]
+    local = [link for link in links if not link.startswith(("http", "mailto:"))]
+    assert "resume.html" in local
+    assert "resume.json" in local
+    for link in local:
+        assert (out / (link or "index.html")).is_file(), link
 
 
 @pytest.mark.slow
@@ -286,7 +303,7 @@ def test_sitemap_lists_the_index_and_every_published_page(built, resume) -> None
     base = resume["meta"]["canonical"].rstrip("/") + "/"
     assert base in locs
     for variant in _published():
-        assert f"{base}resume-{variant}.html" in locs
+        assert f"{base}{_filename(resume, variant, 'html')}" in locs
 
 
 @pytest.mark.slow
@@ -298,11 +315,20 @@ def test_site_names_primary_and_alternative_pdfs(resume, tmp_path, monkeypatch) 
     monkeypatch.setattr(site_mod, "load_variants", lambda: cuts)
     resume["basics"]["name"] = "Élodie Morgan"
     artifacts = build_site(resume, out_dir=tmp_path)
-    filenames = {a.path.name for a in artifacts if a.fmt == "pdf"}
+    filenames = {a.path.name for a in artifacts if a.variant in cuts}
     assert filenames == {
         "Elodie-Morgan-Resume.pdf",
+        "resume.html",
+        "resume.json",
+        "resume.md",
         "Elodie-Morgan-Resume-One-Page.pdf",
+        "resume-one-page.html",
+        "resume-one-page.json",
+        "resume-one-page.md",
         "Elodie-Morgan-Resume-Full.pdf",
+        "resume-full.html",
+        "resume-full.json",
+        "resume-full.md",
     }
     index = (tmp_path / "index.html").read_text()
     llms = (tmp_path / "llms.txt").read_text()
@@ -310,6 +336,8 @@ def test_site_names_primary_and_alternative_pdfs(resume, tmp_path, monkeypatch) 
         assert (tmp_path / filename).is_file()
         assert f'href="{filename}"' in index
         assert filename in llms
+    assert not list(tmp_path.glob("resume-2-page.*"))
+    assert not list(tmp_path.glob("resume-private.*"))
 
 
 @pytest.mark.slow
@@ -338,9 +366,8 @@ def test_single_published_cut_has_no_version_label(resume, tmp_path, monkeypatch
         assert not list(tmp_path.glob(f"resume-{name}.*"))
         for filename in ("index.html", "sitemap.xml", "llms.txt"):
             assert f"resume-{name}" not in (tmp_path / filename).read_text()
-    assert (tmp_path / "resume.json").read_bytes() == (
-        tmp_path / "resume-2-page.json"
-    ).read_bytes()
+    assert (tmp_path / "resume.json").is_file()
+    assert not list(tmp_path.glob("resume-*"))
 
 
 @pytest.mark.slow
@@ -349,35 +376,25 @@ def test_site_omits_unselected_formats(resume, tmp_path, monkeypatch, omitted):
     formats = tuple(fmt for fmt in ("pdf", "html", "json", "md") if fmt != omitted)
     cut = Variant("short", "Public cut", frozenset(), publish=True, formats=formats)
     monkeypatch.setattr(site_mod, "load_variants", lambda: {cut.name: cut})
-    stale = (
-        pdf_filename(resume["basics"]["name"], "short", "short")
-        if omitted == "pdf"
-        else f"resume-short.{omitted}"
-    )
+    stale = artifact_filename(omitted, resume["basics"]["name"], "short", "short")
     (tmp_path / stale).write_text("previous build")
-    (tmp_path / "resume.json").write_text("previous alias")
     written = build_site(resume, out_dir=tmp_path)
     names = {a.path.name for a in written}
     index = (tmp_path / "index.html").read_text()
     llms = (tmp_path / "llms.txt").read_text()
     sitemap = (tmp_path / "sitemap.xml").read_text()
     for fmt in ("pdf", "html", "json", "md"):
-        name = (
-            pdf_filename(resume["basics"]["name"], "short", "short")
-            if fmt == "pdf"
-            else f"resume-short.{fmt}"
-        )
+        name = artifact_filename(fmt, resume["basics"]["name"], "short", "short")
         assert (name in names) == (fmt != omitted)
         assert (tmp_path / name).exists() == (fmt != omitted)
         assert (f'href="{name}"' in index) == (fmt != omitted)
         if fmt != "json":
             assert (name in llms) == (fmt != omitted)
     assert ("PDF · " in index) == (omitted != "pdf")
-    assert ("resume.json" in names) == (omitted != "json")
-    assert (tmp_path / "resume.json").exists() == (omitted != "json")
     assert ("[resume.json]" in llms) == (omitted != "json")
     assert ("## Machine-readable" in llms) == (omitted != "json")
-    assert ("resume-short.html" in sitemap) == (omitted != "html")
+    assert ("resume.html" in sitemap) == (omitted != "html")
+    assert not list(tmp_path.glob("resume-*"))
     title = f"{resume['basics']['name']} — Resume"
     assert llms.startswith(f"# {title}\n")
     assert f"<title>{title}</title>" in index

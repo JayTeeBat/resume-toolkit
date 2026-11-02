@@ -8,7 +8,7 @@
 | schema.org Person / OpenGraph | Unversioned vocabularies | Landing-page structured data and preview metadata | `site.py`, `test_site.py`; no external conformance validator | — |
 | Sitemaps protocol | 0.9 | Canonical site URLs | `site.py`, `test_site.py` | — |
 | llms.txt | Unversioned proposal | Primary CV and alternative links | `llms.txt.j2`, `test_site.py`; no external conformance validator | — |
-| repo-standard-kit | v2.0.0, `python-single` | Repository quality and compliance | `compliance.yml`, pre-commit, `test_standards.py` | [Adoption](adr/0002-adopt-repo-standard.md) |
+| repo-standard-kit | v2.0.0 (`417aa92f1711fe8266622ef9dde797e0f40f2def`), `python-single` | Repository quality and compliance | `compliance.yml`, pre-commit, `test_standards.py` | [Adoption](adr/0002-adopt-repo-standard.md) |
 
 ## Deliberate deviations
 

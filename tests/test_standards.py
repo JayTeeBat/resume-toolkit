@@ -27,7 +27,7 @@ def test_standards_pins() -> None:
         "README.md",
     ):
         pins += re.findall(
-            r"repo-standard-kit(?:\.git)?(?:@|/(?:tree|blob)/)(v[\d.]+)",
+            r"repo-standard-kit(?:\.git)?(?:@|/(?:tree|blob)/)(v[\d.]+|[0-9a-f]{40})",
             (ROOT / name).read_text(),
         )
     assert pins

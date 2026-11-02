@@ -22,7 +22,12 @@ from .common import (
     phrase_matches,
 )
 from .config import CheckConfig, checked_variants
-from .language import SENTENCE_END, UNIT_WITHOUT_SPACE, US_SPELLING_STEMS
+from .language import (
+    NOUN_HOMOGRAPHS,
+    SENTENCE_END,
+    UNIT_WITHOUT_SPACE,
+    US_SPELLING_STEMS,
+)
 
 
 def punctuation(
@@ -110,24 +115,27 @@ def tense(
     """Current role (no endDate) opens bullets in the present; past roles in
     the past. Only verbs the lists recognise are judged, so noun-phrase
     summaries pass through unexamined — this catches drift, it does not prove
-    completeness.
+    completeness. Words in NOUN_HOMOGRAPHS ("Design", "Test"…) are not judged
+    in summaries, where they usually open a noun phrase.
     """
     violations: list[Violation] = []
     for i, entry in enumerate(resume.get("work", [])):
         current = "endDate" not in entry
         label = entry_label(entry)
         texts = (
-            [(f"$.work[{i}].summary  ({label})", entry["summary"])]
+            [(f"$.work[{i}].summary  ({label})", entry["summary"], True)]
             if "summary" in entry
             else []
         )
         texts += [
-            (f"$.work[{i}].highlights[{j}]  ({label})", h)
+            (f"$.work[{i}].highlights[{j}]  ({label})", h, False)
             for j, h in enumerate(entry.get("highlights", []))
         ]
-        for where, text in texts:
+        for where, text, is_summary in texts:
             word = first_word(text)
-            present, past = looks_present(word), looks_past(word)
+            if is_summary and word in NOUN_HOMOGRAPHS:
+                continue
+            present, past = looks_present(word, config.extra_verbs), looks_past(word)
             if current and past and not present:
                 violations.append(
                     Violation(
@@ -154,7 +162,7 @@ def verb_led(
     """A bullet states what was done, so it opens on a verb the tense lists
     recognise: "Characterised the layers", not "Characterisation of the
     layers". A genuine verb missing from the lists belongs in PRESENT_VERBS
-    or IRREGULAR_PAST, not in an exception here.
+    or IRREGULAR_PAST; domain-specific present verbs can use extra_verbs.
     """
     violations = []
     for i, entry in enumerate(resume.get("work", [])):
@@ -163,7 +171,7 @@ def verb_led(
         )
         for j, text in enumerate(entry.get("highlights", [])):
             word = first_word(text)
-            if not (looks_present(word) or looks_past(word)):
+            if not (looks_present(word, config.extra_verbs) or looks_past(word)):
                 violations.append(
                     Violation(
                         f"$.work[{i}].highlights[{j}]  ({entry_label(entry)})",

@@ -68,8 +68,8 @@ def first_word(text: str) -> str:
     return match.group() if match else ""
 
 
-def looks_present(word: str) -> bool:
-    return word in PRESENT_VERBS
+def looks_present(word: str, extra_verbs: list[str]) -> bool:
+    return word in PRESENT_VERBS or word in extra_verbs
 
 
 def looks_past(word: str) -> bool:

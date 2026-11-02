@@ -83,28 +83,52 @@ UNIT_WITHOUT_SPACE = re.compile(
 )
 
 PRESENT_VERBS = {
+    "Analyse",
+    "Analyze",
     "Architect",
     "Automate",
     "Build",
+    "Configure",
+    "Coordinate",
     "Create",
     "Define",
     "Deliver",
+    "Deploy",
+    "Design",
     "Develop",
     "Drive",
     "Enforce",
     "Fix",
     "Implement",
+    "Integrate",
     "Lead",
     "Maintain",
     "Manage",
+    "Mentor",
+    "Migrate",
+    "Model",
+    "Monitor",
+    "Operate",
+    "Optimise",
+    "Optimize",
     "Own",
     "Run",
     "Set",
     "Ship",
+    "Simulate",
     "Specify",
+    "Support",
+    "Test",
+    "Train",
     "Turn",
+    "Validate",
     "Write",
 }
+
+# Present verbs that open noun-phrase summaries just as often ("Design, sizing
+# and development of …"). `tense` does not judge them in summaries; highlights
+# are verb-led, so there they are verbs and are judged.
+NOUN_HOMOGRAPHS = {"Design", "Mentor", "Model", "Monitor", "Support", "Test", "Train"}
 
 IRREGULAR_PAST = {
     "Built",

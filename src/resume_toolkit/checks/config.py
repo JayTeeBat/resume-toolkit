@@ -92,6 +92,7 @@ class CheckConfig:
             ],
         }
     )
+    extra_verbs: list[str] = field(default_factory=list)
     spelling: str = "none"
     proper_names: dict[str, str] = field(default_factory=dict)
     published_variants: list[str] = field(default_factory=list)
@@ -172,6 +173,12 @@ def load_config(path: Path = Path("resume-checks.toml")) -> CheckConfig:
                 raise ConfigError(
                     f"{key}: expected [minimum, maximum], 1 <= minimum <= maximum"
                 )
+        if key == "extra_verbs" and any(
+            not re.fullmatch(r"[A-Z][a-zA-Z]*", verb) for verb in value
+        ):
+            raise ConfigError(
+                "extra_verbs: expected non-empty single words starting uppercase"
+            )
         if key == "proper_names" and any(
             not isinstance(v, str) or not k or not v for k, v in value.items()
         ):

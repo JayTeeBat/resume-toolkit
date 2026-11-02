@@ -118,3 +118,31 @@ def test_variant_exemptions_drop_one_rule_for_one_cut() -> None:
 def test_unknown_variant_names_are_actionable(config, key) -> None:
     with pytest.raises(ConfigError, match=f"{key}: 'missing' not in variants.toml"):
         published_variants(config, CUTS)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        '"Configure"',
+        "[1]",
+        '[""]',
+        '[" "]',
+        '["configure"]',
+        '["Configure systems"]',
+        '[" Configure"]',
+        '["Configure "]',
+        '["Configure-Tools"]',
+        '["Configure2"]',
+    ],
+)
+def test_extra_verbs_rejects_invalid_entries(tmp_path, value):
+    path = tmp_path / "checks.toml"
+    path.write_text(f"extra_verbs = {value}")
+    with pytest.raises(ConfigError, match="extra_verbs"):
+        load_config(path)
+
+
+def test_extra_verbs_accepts_empty_list(tmp_path):
+    path = tmp_path / "checks.toml"
+    path.write_text("extra_verbs = []")
+    assert load_config(path).extra_verbs == []

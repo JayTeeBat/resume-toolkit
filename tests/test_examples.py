@@ -9,6 +9,8 @@ from pathlib import Path
 
 import pytest
 
+from resume_toolkit.build import artifact_filename
+
 EXAMPLES = Path(__file__).resolve().parents[1] / "examples"
 
 
@@ -41,8 +43,26 @@ def test_example_validate_and_check(example_workspace):
 @pytest.mark.parametrize("fmt", ["html", "json", "md"])
 def test_example_build_without_browser(example_workspace, fmt):
     run_cli(example_workspace, "build", "-f", fmt)
-    for variant in ("full", "short"):
-        assert (example_workspace / "dist" / f"resume-{variant}.{fmt}").is_file()
+    # short is the example's published (primary) cut, so it owns resume.<fmt>.
+    assert (example_workspace / "dist" / f"resume.{fmt}").is_file()
+    assert (example_workspace / "dist" / f"resume-full.{fmt}").is_file()
+    assert not (example_workspace / "dist" / f"resume-short.{fmt}").exists()
+
+
+def test_example_build_without_a_published_cut_suffixes_everything(
+    example_workspace,
+):
+    """Nothing published, nothing primary: no cut may claim resume.<fmt>."""
+    path = example_workspace / "variants.toml"
+    path.write_text(path.read_text().replace("publish = true", "publish = false"))
+    for fmt in ("html", "json", "md"):
+        run_cli(example_workspace, "build", "-f", fmt)
+    dist = example_workspace / "dist"
+    assert sorted(p.name for p in dist.iterdir()) == [
+        f"resume-{variant}.{fmt}"
+        for variant in ("full", "short")
+        for fmt in ("html", "json", "md")
+    ]
 
 
 @pytest.mark.slow
@@ -56,9 +76,9 @@ def test_example_build_all_formats(example_workspace, site_formats):
             )
         )
     run_cli(example_workspace, "build")
-    for variant in ("full", "short"):
-        for fmt in ("html", "json", "md"):
-            assert (example_workspace / "dist" / f"resume-{variant}.{fmt}").is_file()
+    for fmt in ("html", "json", "md"):
+        assert (example_workspace / "dist" / f"resume.{fmt}").is_file()
+        assert (example_workspace / "dist" / f"resume-full.{fmt}").is_file()
     assert (example_workspace / "dist" / "Ada-Lovelace-Resume.pdf").is_file()
     assert (example_workspace / "dist" / "Ada-Lovelace-Resume-Full.pdf").is_file()
     run_cli(example_workspace, "check")
@@ -104,7 +124,10 @@ def test_selected_build_colophon_uses_first_published_cut(
         path.write_text(path.read_text().replace("publish = true", "publish = false"))
     for fmt in ("html", "md"):
         run_cli(example_workspace, "build", "-v", variant, "-f", fmt)
-        text = (example_workspace / "dist" / f"resume-{variant}.{fmt}").read_text()
+        name = artifact_filename(
+            fmt, "Ada Lovelace", variant, "short" if published else None
+        )
+        text = (example_workspace / "dist" / name).read_text()
         assert (f"{variant.title()} Version" in text) == (
             not published or variant != "short"
         )

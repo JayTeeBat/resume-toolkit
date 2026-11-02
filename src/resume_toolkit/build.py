@@ -20,6 +20,24 @@ class Artifact:
     path: Path
 
 
+def artifact_filename(
+    fmt: str, name: str, variant: str, primary_variant: str | None = None
+) -> str:
+    """Where one format of one cut lands; the single naming rule for every output.
+
+    The primary cut owns the unsuffixed addresses — `resume.html`,
+    `resume.json`, `resume.md` and `<Name>-Resume.pdf` — so its public URLs
+    survive renaming the variant behind them. Every other cut carries its
+    variant name. With no primary (nothing published), every cut is suffixed.
+    `name` is `basics.name`; only the PDF uses it.
+    """
+    if fmt == "pdf":
+        return pdf_filename(name, variant, primary_variant)
+    if variant == primary_variant:
+        return f"resume.{fmt}"
+    return f"resume-{variant}.{fmt}"
+
+
 def build_variant(
     resume: dict,
     variant: Variant,
@@ -40,17 +58,20 @@ def build_variant(
     )
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    def target(fmt: str) -> Path:
+        return out_dir / artifact_filename(
+            fmt, data.get("basics", {}).get("name", ""), variant.name, primary_variant
+        )
+
     written: list[Artifact] = []
 
     if "html" in formats:
-        path = out_dir / f"resume-{variant.name}.html"
+        path = target("html")
         path.write_text(html, encoding="utf-8")
         written.append(Artifact(variant.name, "html", path))
 
     if "pdf" in formats:
-        path = out_dir / pdf_filename(
-            data.get("basics", {}).get("name", ""), variant.name, primary_variant
-        )
+        path = target("pdf")
         footer = render_print_footer(
             data, theme=theme, variant=label, stamp=stamp, style=variant.style
         )
@@ -71,7 +92,7 @@ def build_variant(
                 "lastModified": stamp.modified,
             }
             payload = {**data, "meta": meta}
-        path = out_dir / f"resume-{variant.name}.json"
+        path = target("json")
         path.write_text(
             json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
         )
@@ -79,7 +100,7 @@ def build_variant(
 
     if "md" in formats:
         md = render_markdown(data, theme=theme, variant=label, stamp=stamp)
-        path = out_dir / f"resume-{variant.name}.md"
+        path = target("md")
         path.write_text(md, encoding="utf-8")
         written.append(Artifact(variant.name, "md", path))
 

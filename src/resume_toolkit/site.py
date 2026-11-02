@@ -14,9 +14,8 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 from markupsafe import Markup
 
-from .build import Artifact, build_variant
+from .build import Artifact, artifact_filename, build_variant
 from .paths import DIST_DIR, SITE_DIR
-from .pdf import pdf_filename
 from .render import location, urlhost
 from .variants import SITE_FORMATS, Variant, load_variants
 from .version import build_stamp
@@ -143,13 +142,14 @@ def build_site(
     variants marked `publish = true` in variants.toml reach the page, so a CV
     tailored to one employer never leaks onto a public URL. Card order follows
     variants.toml, so reordering the file reorders the page; the first
-    published variant is the primary cut, shown first and most prominently.
+    published variant is the primary cut, shown first and most prominently,
+    and published at the unsuffixed addresses (see artifact_filename): its
+    /resume.json is the guessable machine address the JSON Resume ecosystem
+    expects, and none of its URLs name the variant behind them.
 
     Beyond the variants, the site gets its front matter: index.html (the human
-    front door), /resume.json (the guessable machine address — an alias of the
-    primary cut, when it publishes JSON), /llms.txt (the note an AI agent reads
-    first), 404.html (the route back for dead links), and robots.txt + sitemap.xml
-    (crawler guidance).
+    front door), /llms.txt (the note an AI agent reads first), 404.html (the
+    route back for dead links), and robots.txt + sitemap.xml (crawler guidance).
     """
     variants = [v for v in load_variants().values() if v.publish]
     if not variants:
@@ -158,18 +158,13 @@ def build_site(
             "`publish = true` in variants.toml"
         )
 
+    primary = variants[0].name
     written: list[Artifact] = []
     for variant in variants:
         # A changed selection must not leave an older public download behind.
         for fmt in set(SITE_FORMATS) - set(variant.formats):
-            filename = (
-                pdf_filename(
-                    resume.get("basics", {}).get("name", ""),
-                    variant.name,
-                    variants[0].name,
-                )
-                if fmt == "pdf"
-                else f"resume-{variant.name}.{fmt}"
+            filename = artifact_filename(
+                fmt, resume.get("basics", {}).get("name", ""), variant.name, primary
             )
             (out_dir / filename).unlink(missing_ok=True)
         written.extend(
@@ -177,24 +172,13 @@ def build_site(
                 resume,
                 variant,
                 theme=theme,
-                primary_variant=variants[0].name,
+                primary_variant=primary,
                 formats=variant.formats,
                 out_dir=out_dir,
             )
         )
 
-    # The canonical machine address. `resume.json` is the filename the JSON
-    # Resume ecosystem expects, and it hides the internal variant name from
-    # the URL — the address survives renaming the variant behind it. Byte-for-
-    # byte the primary (first published) cut, copied so the two cannot drift.
-    primary = variants[0]
     cards = [_card(v, written) for v in variants]
-    alias = out_dir / "resume.json"
-    if "json" in primary.formats:
-        alias.write_bytes((out_dir / f"resume-{primary.name}.json").read_bytes())
-        written.append(Artifact(primary.name, "json", alias))
-    else:
-        alias.unlink(missing_ok=True)
 
     index = out_dir / "index.html"
     index.write_text(_render_index(resume, cards), encoding="utf-8")

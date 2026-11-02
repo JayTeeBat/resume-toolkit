@@ -2,6 +2,22 @@
 
 ## [Unreleased]
 
+## 0.5.0 - 2026-11-02
+
+### Changed
+
+- **Breaking:** the primary cut (the first `publish = true` variant) now
+  publishes at unsuffixed addresses in every format: `resume.html`,
+  `resume.json` and `resume.md`, alongside the unchanged `<Name>-Resume.pdf`.
+  Other cuts keep `resume-<variant>.*` and `<Name>-Resume-<Variant>.pdf`.
+  `resume build` and `resume site` share one naming rule
+  (`build.artifact_filename`); with no published variant every file keeps its
+  suffix. The primary's former `resume-<variant>.*` URLs disappear without
+  redirects; update links that point at them.
+- `resume.json` is now the primary JSON itself rather than a copy written next
+  to `resume-<variant>.json`; the separate alias step is gone. The landing
+  page, `llms.txt` and the sitemap link the new names.
+
 ## 0.4.1 - 2026-11-02
 
 ### Fixed
